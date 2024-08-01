@@ -1,7 +1,9 @@
 package io.mocha.accompanist.data.model.lyrics.synced
 
+import androidx.compose.runtime.Stable
 import io.mocha.accompanist.data.model.lyrics.ISyncedLine
 
+@Stable
 data class SyncedLine(
     val content: String,
     val translation: String?,

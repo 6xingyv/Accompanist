@@ -1,5 +1,8 @@
 package io.mocha.accompanist.data.model.lyrics.karaoke
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class KaraokeSyllable(
     val content: String,
     val start: Int,
