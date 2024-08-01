@@ -17,18 +17,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
@@ -39,12 +44,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import io.mocha.accompanist.data.model.lyrics.SyncedLyrics
-import io.mocha.accompanist.data.model.playback.PlaybackState
+import io.mocha.accompanist.data.model.playback.LyricsState
 import io.mocha.accompanist.data.parser.LyricifySyllableParser
 import io.mocha.accompanist.ui.composable.background.FlowingLightBackground
 import io.mocha.accompanist.ui.composable.lyrics.KaraokeLyricsView
 import io.mocha.accompanist.ui.theme.AccompanistTheme
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.android.awaitFrame
 
 class MainActivity : ComponentActivity() {
     private fun Context.resourceUri(resourceId: Int): Uri = with(resources) {
@@ -55,6 +60,7 @@ class MainActivity : ComponentActivity() {
             .appendPath(getResourceEntryName(resourceId))
             .build()
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -69,9 +75,8 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.statusBarColor = Color.Transparent.toArgb()
         window.navigationBarColor = Color.Transparent.toArgb()
-        window.isStatusBarContrastEnforced =false
-        window.isNavigationBarContrastEnforced =false
-
+        window.isStatusBarContrastEnforced = false
+        window.isNavigationBarContrastEnforced = false
 
         setContent {
             val context = LocalContext.current
@@ -79,6 +84,9 @@ class MainActivity : ComponentActivity() {
             val item = MediaItem.fromUri(this.resourceUri(R.raw.test))
             val mediaSession = remember { MediaSession.Builder(context, player).build() }
             var currentPosition by remember { mutableLongStateOf(0L) }
+            val listState = rememberLazyListState()
+            val currentPlayer by rememberUpdatedState(player)
+
             DisposableEffect(Unit) {
                 player.setMediaItem(item)
                 player.setAudioAttributes(
@@ -98,8 +106,8 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 while (true) {
-                    currentPosition = player.currentPosition
-                    delay(20L) // 更新频率
+                    awaitFrame()
+                    currentPosition = currentPlayer.currentPosition
                 }
             }
 
@@ -130,38 +138,27 @@ class MainActivity : ComponentActivity() {
                                 lyrics = LyricifySyllableParser.parse(data)
                             }
                             lyrics?.let {
-                                val playbackState = remember(currentPosition) {
-                                    PlaybackState(
-                                        player.currentPosition.toInt(),
-                                        player.duration.toInt(),
-                                        it
+                                val lyricsState = remember(currentPosition) {
+                                    LyricsState(
+                                        { currentPlayer.currentPosition.toInt() },
+                                        currentPlayer.duration.toInt(),
+                                        it,
+                                        listState
                                     )
                                 }
                                 KaraokeLyricsView(
-                                    playbackState = playbackState,
+                                    lyricsState = lyricsState,
                                     lyrics = it,
                                     onLineClicked = { line ->
-                                        player.seekTo(line.start.toLong())
+                                        currentPlayer.seekTo(line.start.toLong())
                                     },
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-//                                    .graphicsLayer {
-//                                        compositingStrategy = CompositingStrategy.Offscreen
-//                                    }
-//                                    .drawWithContent {
-//                                        drawContent()
-//                                        drawRect(
-//                                            Brush.verticalGradient(
-//                                                0f to Color.Transparent,
-//                                                0.1f to Color.Black,
-//                                                0.5f to Color.Black,
-//                                                1f to Color.Transparent
-//                                            ), blendMode = BlendMode.DstIn
-//                                        )
-//                                    }
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp)
+                                        .graphicsLayer {
+                                            compositingStrategy = CompositingStrategy.Offscreen
+                                        }
                                 )
                             }
-
-
                         }
                         Spacer(
                             modifier = Modifier
@@ -175,7 +172,6 @@ class MainActivity : ComponentActivity() {
                                 )
                         )
                     }
-
                 }
             }
         }

@@ -1,8 +1,10 @@
 package io.mocha.accompanist.data.model.lyrics.karaoke
 
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import io.mocha.accompanist.data.model.lyrics.ISyncedLine
 
+@Stable
 data class KaraokeLine(
     val syllables: List<KaraokeSyllable>,
     val translation: String?,
