@@ -17,9 +17,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,11 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import io.mocha.accompanist.data.model.lyrics.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.parser.LyricifySyllableParser
 import io.mocha.accompanist.data.model.playback.LyricsState
-import io.mocha.accompanist.data.parser.LyricifySyllableParser
 import io.mocha.accompanist.ui.composable.background.FlowingLightBackground
 import io.mocha.accompanist.ui.composable.lyrics.KaraokeLyricsView
 import io.mocha.accompanist.ui.theme.AccompanistTheme
@@ -80,22 +82,40 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val context = LocalContext.current
-            val player = remember { ExoPlayer.Builder(context).build() }
+            val player = remember { 
+                ExoPlayer.Builder(context)
+                    .build()
+                    .apply {
+                        setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                                .setUsage(C.USAGE_MEDIA)
+                                .build(),
+                            true
+                        )
+                    }
+            }
             val item = MediaItem.fromUri(this.resourceUri(R.raw.test))
-            val mediaSession = remember { MediaSession.Builder(context, player).build() }
+            val mediaSession = remember { 
+                MediaSession.Builder(context, player).build() 
+            }
             var currentPosition by remember { mutableLongStateOf(0L) }
+            var isPlaying by remember { mutableStateOf(false) }
             val listState = rememberLazyListState()
             val currentPlayer by rememberUpdatedState(player)
 
+            // 监听播放状态
+            LaunchedEffect(player) {
+                val listener = object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        isPlaying = playing
+                    }
+                }
+                player.addListener(listener)
+            }
+
             DisposableEffect(Unit) {
                 player.setMediaItem(item)
-                player.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                        .setUsage(C.USAGE_MEDIA)
-                        .build(),
-                    true
-                )
                 player.prepare()
                 player.playWhenReady = true
                 onDispose {
@@ -104,10 +124,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(Unit) {
+            LaunchedEffect(currentPlayer) {
                 while (true) {
                     awaitFrame()
-                    currentPosition = currentPlayer.currentPosition
+                    val newPosition = currentPlayer.currentPosition
+                    currentPosition = newPosition
                 }
             }
 
@@ -119,43 +140,53 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     Box {
                         FlowingLightBackground(
-                            ImageBitmap.imageResource(
-                                resources,
-                                R.drawable.test
-                            )
+                            bitmap = remember {
+                                ImageBitmap.imageResource(
+                                    resources,
+                                    R.drawable.test
+                                )
+                            }
                         )
 
                         Column(Modifier.padding()) {
-                            var data: List<String>
                             var lyrics: SyncedLyrics? by remember {
                                 mutableStateOf(null)
                             }
-
                             LaunchedEffect(Unit) {
-                                val asset = application.assets.open("test.qrc")
-                                data = asset.bufferedReader().use { it.readLines() }
-                                asset.close()
-                                lyrics = LyricifySyllableParser.parse(data)
+                                try {
+                                    val asset = application.assets.open("me.lys")
+                                    val data = asset.bufferedReader().use { it.readLines() }
+                                    asset.close()
+                                    val parsedLyrics = LyricifySyllableParser.parse(data)
+                                    lyrics = parsedLyrics
+                                    // 调试信息
+                                    println("歌词加载成功: ${parsedLyrics.lines.size} 行")
+                                } catch (e: Exception) {
+                                    println("歌词加载失败: ${e.message}")
+                                    lyrics = SyncedLyrics(emptyList())
+                                }
                             }
-                            lyrics?.let {
-                                val lyricsState = remember(currentPosition) {
+                              lyrics?.let { lyricsData ->
+                                // 稳定的 LyricsState 创建，避免不必要的重组
+                                val lyricsState = remember(lyricsData) {
                                     LyricsState(
                                         { currentPlayer.currentPosition.toInt() },
-                                        currentPlayer.duration.toInt(),
-                                        it,
+                                        if (currentPlayer.duration == C.TIME_UNSET) 0 else currentPlayer.duration.toInt(),
+                                        lyricsData,
                                         listState
                                     )
                                 }
-                                KaraokeLyricsView(
+                                  KaraokeLyricsView(
                                     lyricsState = lyricsState,
-                                    lyrics = it,
+                                    lyrics = lyricsData,
+                                    currentPosition = currentPosition,
                                     onLineClicked = { line ->
                                         currentPlayer.seekTo(line.start.toLong())
                                     },
                                     modifier = Modifier
                                         .padding(horizontal = 12.dp)
                                         .graphicsLayer {
-                                            compositingStrategy = CompositingStrategy.Offscreen
+                                            compositingStrategy = CompositingStrategy.ModulateAlpha
                                         }
                                 )
                             }
@@ -171,6 +202,9 @@ class MainActivity : ComponentActivity() {
                                     )
                                 )
                         )
+
+
+                        Text(currentPosition.toString(), modifier = Modifier.statusBarsPadding())
                     }
                 }
             }

@@ -9,7 +9,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,94 +18,108 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import io.mocha.accompanist.data.model.lyrics.ISyncedLine
-import io.mocha.accompanist.data.model.lyrics.SyncedLyrics
-import io.mocha.accompanist.data.model.lyrics.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.model.ISyncedLine
+import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
+import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import io.mocha.accompanist.data.model.playback.LyricsState
 
 @Composable
 fun KaraokeLyricsView(
     lyricsState: LyricsState,
     lyrics: SyncedLyrics,
+    currentPosition: Long,
     onLineClicked: (ISyncedLine) -> Unit,
     modifier: Modifier = Modifier
 ) {
-//    var lastIndex by remember { mutableIntStateOf(lyricsState.firstFocusedLine()) }
-//
-//    LaunchedEffect(lyricsState.firstFocusedLine) {
-//        val scrollToItem = lyricsState.lazyListState.layoutInfo.visibleItemsInfo.find {
-//            it.index == lyricsState.firstFocusedLine()
-//        }
-//
-//        val lastItem = lyricsState.lazyListState.layoutInfo.visibleItemsInfo.find {
-//            it.index == lastIndex
-//        }
-//
-//        lyricsState.isScrollingProgrammatically = true
-//
-//        try {
-//            if (scrollToItem != null && lastItem != null && scrollToItem.offset >= 0) {
-//                val diff = (scrollToItem.offset - lastItem.offset).toFloat()
-//                lyricsState.lazyListState.animateScrollBy(diff, tween(300))
-//            } else {
-//                lyricsState.lazyListState.animateScrollToItem(lyricsState.firstFocusedLine())
-//            }
-//        } finally {
-//            lyricsState.isScrollingProgrammatically = false
-//        }
-//
-//        lastIndex = lyricsState.firstFocusedLine()
-//    }
+    val listState = lyricsState.lazyListState
+
+    val currentTimeMs = currentPosition.toInt()
+
+    val focusedLineIndex
+           = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
+
+    LaunchedEffect(Unit) {
+        listState.animateScrollToItem(focusedLineIndex)
+    }
+
+    LaunchedEffect(focusedLineIndex) {
+        if (focusedLineIndex >= 0 &&
+            focusedLineIndex < lyrics.lines.size &&
+            !listState.isScrollInProgress) {
+
+            try {
+                println("自动滚动到行: $focusedLineIndex")
+                listState.animateScrollBy(40f)
+            } catch (e: Exception) {
+                println("滚动异常: ${e.message}")
+            }
+        }
+    }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
-        state = lyricsState.lazyListState,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        contentPadding = PaddingValues(vertical = 100.dp)
     ) {
-        itemsIndexed(lyrics.lines, key = { index, line -> line.hashCode() }) { index, line ->
+        itemsIndexed(
+            items = lyrics.lines,
+            key = { index, line -> "${line.start}-${line.end}-$index" }
+        ) { index, line ->
             if (line is KaraokeLine) {
+                // 判断是否为当前焦点行（用于伴唱显示）
+                val isCurrentFocusLine = remember(index, focusedLineIndex) {
+                    index == focusedLineIndex ||
+                    (line.isAccompaniment && kotlin.math.abs(index - focusedLineIndex) <= 1)
+                }
+
                 if (!line.isAccompaniment) {
                     KaraokeLineText(
-                        lyricsState = lyricsState,
                         line = line,
                         onLineClicked = onLineClicked,
-                        currentLineIndex = index
+                        currentTimeMs = currentTimeMs
                     )
                 } else {
                     AnimatedVisibility(
-                        visible = line.isFocused(lyricsState.current()),
+                        visible = isCurrentFocusLine,
                         enter = scaleIn(
                             transformOrigin = TransformOrigin(
-                                if (line.alignment == Alignment.TopStart) 0f else 1f,
+                                if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
                                 0f
-                            )
-                        ) + slideInVertically()+ expandVertically(),
+                            ),
+                            animationSpec = tween(300)
+                        ) + slideInVertically(
+                            animationSpec = tween(300)
+                        ) + expandVertically(
+                            animationSpec = tween(300)
+                        ),
                         exit = scaleOut(
                             transformOrigin = TransformOrigin(
-                                if (line.alignment == Alignment.TopStart) 0f else 1f,
+                                if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
                                 0f
-                            )
-                        ) + slideOutVertically()+ shrinkVertically()
+                            ),
+                            animationSpec = tween(300)
+                        ) + slideOutVertically(
+                            animationSpec = tween(300)
+                        ) + shrinkVertically(
+                            animationSpec = tween(300)
+                        )
                     ) {
                         KaraokeLineText(
-                            lyricsState = lyricsState,
                             line = line,
                             onLineClicked = onLineClicked,
-                            currentLineIndex = index
+                            currentTimeMs = currentTimeMs
                         )
                     }
                 }
             }
         }
+
         item("BottomSpacing") {
             Spacer(
                 modifier = Modifier

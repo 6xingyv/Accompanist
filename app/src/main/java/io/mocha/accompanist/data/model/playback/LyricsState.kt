@@ -1,7 +1,7 @@
 package io.mocha.accompanist.data.model.playback
 
 import androidx.compose.foundation.lazy.LazyListState
-import io.mocha.accompanist.data.model.lyrics.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
 
 data class LyricsState(
     val current:()->Int,

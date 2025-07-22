@@ -1,3 +1,6 @@
+import java.util.Properties
+import kotlin.apply
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -20,7 +23,29 @@ android {
         }
     }
 
+    signingConfigs {
+        val localProps = Properties().apply {
+            val file = rootProject.file("signing.properties")
+            if (file.exists()) {
+                file.inputStream().use { load(it) }
+            }
+        }
+        create("release")  {
+            storeFile = rootProject.file(localProps["RELEASE_STORE_FILE"] as String)
+            storePassword = localProps["RELEASE_STORE_PASSWORD"] as String
+            keyAlias = localProps["RELEASE_KEY_ALIAS"] as String
+            keyPassword = localProps["RELEASE_KEY_PASSWORD"] as String
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -28,7 +53,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -64,6 +89,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.activity)
+    implementation(libs.accompanist.lyrics)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
