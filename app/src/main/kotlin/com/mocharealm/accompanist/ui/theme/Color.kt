@@ -1,4 +1,4 @@
-package io.mocha.accompanist.ui.theme
+package com.mocharealm.accompanist.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package io.mocha.accompanist.ui.composable.lyrics
+package com.mocharealm.accompanist.ui.composable.lyrics
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -8,16 +8,18 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
@@ -27,25 +29,43 @@ import com.mocharealm.accompanist.lyrics.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import io.mocha.accompanist.data.model.playback.LyricsState
 
 @Composable
 fun KaraokeLyricsView(
-    lyricsState: LyricsState,
+    listState: LazyListState,
     lyrics: SyncedLyrics,
     currentPosition: Long,
     onLineClicked: (ISyncedLine) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = lyricsState.lazyListState
-
     val currentTimeMs = currentPosition.toInt()
 
     val focusedLineIndex
            = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
 
-    LaunchedEffect(Unit) {
-        listState.animateScrollToItem(focusedLineIndex)
+    val isDuoView by remember {
+        derivedStateOf {
+            var hasStart = false
+            var hasEnd = false
+
+            if (lyrics.lines.isEmpty()) {
+                return@derivedStateOf false
+            }
+
+            for (line in lyrics.lines) {
+                if (line is KaraokeLine) {
+                    when (line.alignment) {
+                        KaraokeAlignment.Start -> hasStart = true
+                        KaraokeAlignment.End -> hasEnd = true
+                        else -> {}
+                    }
+                }
+                if (hasStart && hasEnd) {
+                    break
+                }
+            }
+            hasStart && hasEnd
+        }
     }
 
     LaunchedEffect(focusedLineIndex) {
@@ -54,13 +74,12 @@ fun KaraokeLyricsView(
             !listState.isScrollInProgress) {
 
             try {
-                println("自动滚动到行: $focusedLineIndex")
-                listState.animateScrollBy(40f)
-            } catch (e: Exception) {
-                println("滚动异常: ${e.message}")
-            }
+                listState.animateScrollToItem(focusedLineIndex)
+            } catch (e: Exception) { }
         }
     }
+
+
 
     LazyColumn(
         state = listState,
@@ -82,7 +101,8 @@ fun KaraokeLyricsView(
                     KaraokeLineText(
                         line = line,
                         onLineClicked = onLineClicked,
-                        currentTimeMs = currentTimeMs
+                        currentTimeMs = currentTimeMs,
+                        modifier = Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                     )
                 } else {
                     AnimatedVisibility(
@@ -113,7 +133,8 @@ fun KaraokeLyricsView(
                         KaraokeLineText(
                             line = line,
                             onLineClicked = onLineClicked,
-                            currentTimeMs = currentTimeMs
+                            currentTimeMs = currentTimeMs,
+                            Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                         )
                     }
                 }

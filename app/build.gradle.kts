@@ -4,16 +4,17 @@ import kotlin.apply
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "io.mocha.accompanist"
-    compileSdk = 34
+    namespace = "com.mocharealm.accompanist"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "io.mocha.accompanist"
+        applicationId = "com.mocharealm.accompanist"
         minSdk = 31
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -88,7 +89,6 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.activity)
     implementation(libs.accompanist.lyrics)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
