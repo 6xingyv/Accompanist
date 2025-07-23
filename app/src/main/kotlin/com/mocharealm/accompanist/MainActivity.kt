@@ -33,10 +33,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
-import com.mocharealm.accompanist.lyrics.parser.LrcParser
-import com.mocharealm.accompanist.lyrics.parser.LyricifySyllableParser
+//import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
+//import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
+//import com.mocharealm.accompanist.lyrics.parser.LrcParser
+//import com.mocharealm.accompanist.lyrics.parser.LyricifySyllableParser
+import com.mocharealm.accompanist.lyrics.parser.TTMLParser
 import com.mocharealm.accompanist.service.PlaybackService
 import com.mocharealm.accompanist.ui.composable.background.BackgroundVisualState
 import com.mocharealm.accompanist.ui.composable.background.FlowingLightBackground
@@ -95,7 +96,7 @@ class MainActivity : ComponentActivity() {
             // Effect for player initialization
             LaunchedEffect(playbackState.isReady) {
                 if (playbackState.isReady && playbackState.duration == 0L) {
-                    val mediaItem = MediaItem.fromUri("asset:///me.flac")
+                    val mediaItem = MediaItem.fromUri("asset:///la-pelirroja.mp3")
                     playerViewModel.setMediaItem(mediaItem)
                     playerViewModel.prepare()
                     playerViewModel.playWhenReady(true)
@@ -121,27 +122,28 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
                     try {
-                        val lyricsData = application.assets.open("me.lys").bufferedReader()
+                        val lyricsData = application.assets.open("la-pelirroja.ttml").bufferedReader()
                             .use { it.readLines() }
-                        val lyricsRaw = LyricifySyllableParser.parse(lyricsData)
+                        val lyricsRaw = TTMLParser.parse(lyricsData)
 
-                        val translationData =
-                            application.assets.open("me-translation.lrc").bufferedReader()
-                                .use { it.readLines() }
-                        val translationRaw = LrcParser.parse(translationData)
-
-                        val translationMap =
-                            translationRaw.lines.associateBy { (it as SyncedLine).start }
-
-                        val finalLyrics = SyncedLyrics(
-                            lyricsRaw.lines.map { line ->
-                                val karaokeLine = line as KaraokeLine
-                                val translationContent =
-                                    (translationMap[karaokeLine.start] as SyncedLine?)?.content
-                                karaokeLine.copy(translation = translationContent)
-                            })
-                        // Create the new, simple, and stable LyricsState object
-                        syncedLyrics = finalLyrics
+//                        val translationData =
+//                            application.assets.open("me-translation.lrc").bufferedReader()
+//                                .use { it.readLines() }
+//                        val translationRaw = LrcParser.parse(translationData)
+//
+//                        val translationMap =
+//                            translationRaw.lines.associateBy { (it as SyncedLine).start }
+//
+//                        val finalLyrics = SyncedLyrics(
+//                            lyricsRaw.lines.map { line ->
+//                                val karaokeLine = line as KaraokeLine
+//                                val translationContent =
+//                                    (translationMap[karaokeLine.start] as SyncedLine?)?.content
+//                                karaokeLine.copy(translation = translationContent)
+//                            })
+//                        // Create the new, simple, and stable LyricsState object
+//                        syncedLyrics = finalLyrics
+                        syncedLyrics = lyricsRaw
                     } catch (e: Exception) {
                         Log.e("LyricsLoader", "Failed to load or parse lyrics", e)
                     }
