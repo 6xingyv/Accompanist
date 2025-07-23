@@ -1,7 +1,6 @@
 package com.mocharealm.accompanist.ui.composable.lyrics
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -46,13 +45,11 @@ import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.ui.theme.SFPro
 
-// WrappedLine 定义保持不变
 data class WrappedLine(
     val syllables: List<KaraokeSyllable>,
     val totalWidth: Float
 )
 
-// calculateWrappedLines 只依赖静态信息
 private fun calculateWrappedLines(
     syllables: List<KaraokeSyllable>,
     availableWidthPx: Float,
@@ -92,7 +89,6 @@ private fun calculateWrappedLines(
     return lines
 }
 
-// 计算静态布局
 private fun calculateStaticLineLayout(
     wrappedLines: List<WrappedLine>,
     textMeasurer: TextMeasurer,
@@ -131,41 +127,67 @@ private fun calculateStaticLineLayout(
     }
 }
 
-
-// 创建整行渐变笔刷
 private fun createLineGradientBrush(
     lineLayout: List<SyllableLayout>,
     currentTimeMs: Int,
 ): Brush {
     val activeColor = Color.Transparent
-    val inactiveColor = Color.White.copy(0.6f)
+    val inactiveColor = Color.White.copy(alpha = 0.5f)
+    val minFadeWidth = 8f
+
     if (lineLayout.isEmpty()) {
-        return Brush.horizontalGradient(0f to inactiveColor, 1f to inactiveColor)
-    }
-    val totalWidth = lineLayout.last().position.x + lineLayout.last().size.width
-
-    val currentSyllable = lineLayout.find {
-        it.syllable.progress(currentTimeMs) > 0f && it.syllable.progress(currentTimeMs) < 1f
+        return Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
     }
 
-    val lineProgress = currentSyllable?.let {
-        (it.position.x + it.size.width * it.syllable.progress(currentTimeMs)) / totalWidth
-    } ?: if (lineLayout.first().syllable.progress(currentTimeMs) == 1f) 1f else 0f
+    val totalWidth = lineLayout.last().let { it.position.x + it.size.width }
 
-    val fadeRange = 0.1f
-    val fadeHalf = fadeRange / 2f
+    if (totalWidth <= 0f) {
+        val isFinished = currentTimeMs >= (lineLayout.lastOrNull()?.syllable?.end ?: 0)
+        val color = if (isFinished) activeColor else inactiveColor
+        return Brush.horizontalGradient(colors = listOf(color, color))
+    }
 
-    return when (lineProgress) {
-        0f -> Brush.horizontalGradient(0f to inactiveColor, 1f to inactiveColor)
-        1f -> Brush.horizontalGradient(0f to activeColor, 1f to activeColor)
-        else -> {
-            Brush.horizontalGradient(
-                0f to activeColor,
-                (lineProgress - fadeHalf).coerceAtLeast(0f) to activeColor,
-                (lineProgress + fadeHalf).coerceAtMost(1f) to inactiveColor,
-                1f to inactiveColor
-            )
+    // Calculate the overall line progress from 0.0f to 1.0f.
+    val lineProgress = run {
+        val activeSyllable = lineLayout.find {
+            currentTimeMs in it.syllable.start until it.syllable.end
         }
+
+        val currentPixelPosition = when {
+            // Case A: Inside an active syllable.
+            activeSyllable != null -> {
+                val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)
+                activeSyllable.position.x + activeSyllable.size.width * syllableProgress
+            }
+            // Case B: After the entire line has finished.
+            currentTimeMs >= lineLayout.last().syllable.end -> {
+                totalWidth
+            }
+            // Case C: In a pause between syllables or before the line starts.
+            else -> {
+                val lastFinished = lineLayout.lastOrNull { currentTimeMs >= it.syllable.end }
+                lastFinished?.let { it.position.x + it.size.width } ?: 0f
+            }
+        }
+        (currentPixelPosition / totalWidth).coerceIn(0f, 1f)
+    }
+
+    val fadeRange = run {
+        val fadeWidthPx = maxOf(totalWidth * 0.05f, minFadeWidth)
+        (fadeWidthPx / totalWidth).coerceAtMost(1f)
+    }
+
+    return when(lineProgress) {
+        0f -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
+        1f -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
+        else -> Brush.horizontalGradient(
+            colorStops = arrayOf(
+                0.0f to activeColor,
+                (lineProgress - fadeRange / 2).coerceAtLeast(0f) to activeColor,
+                (lineProgress + fadeRange / 2).coerceAtMost(1f) to inactiveColor,
+                1.0f to inactiveColor
+            )
+        )
     }
 }
 
@@ -184,32 +206,34 @@ private fun DrawScope.drawLine(
     }
 
     lineLayouts.forEach { rowLayouts ->
-        // 动态计算高亮渐变
+        // Calculate the progress brush
         val progressBrush = createLineGradientBrush(rowLayouts, currentTimeMs)
 
-        // 绘制底层基础文本
+        // Draw syllables
         rowLayouts.forEach { syllableLayout ->
-            // 在绘制时动态计算每个音节的进度和浮动
             val progress = syllableLayout.syllable.progress(currentTimeMs)
-            val floatOffset = 8f * (1f - progress)
-            val finalPosition = syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
+            // TODO: Extract 4f to a constant
+            val floatOffset = 4f * (1f - progress)
+            val finalPosition =
+                syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
 
             val result = textMeasurer.measure(syllableLayout.syllable.content, style)
             drawText(
                 textLayoutResult = result,
                 brush = Brush.horizontalGradient(0f to color, 1f to color),
                 topLeft = finalPosition,
-                blendMode = BlendMode.Softlight
+                blendMode = BlendMode.Plus
             )
         }
 
-        // 在上层叠加高亮效果
+        // Draw the mask gradient
         val width = rowLayouts.last().position.x + rowLayouts.last().size.width
         val height = rowLayouts.maxOf { it.size.height }
         drawRect(
             brush = progressBrush,
             topLeft = rowLayouts.first().position,
-            size = Size(width, height + 8f), // 增加高度以覆盖浮动范围
+            // TODO: Extract 8f to a constant
+            size = Size(width, height + 8f), // Expand height for float & glow animation
             blendMode = BlendMode.DstOut
         )
     }
@@ -290,9 +314,17 @@ fun KaraokeLineText(
 
                 val totalHeight = remember(wrappedLines, line.isAccompaniment) {
                     val style = if (line.isAccompaniment) {
-                        TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
+                        TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SFPro
+                        )
                     } else {
-                        TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
+                        TextStyle(
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SFPro
+                        )
                     }
                     val lineHeight = textMeasurer.measure("M", style).size.height
                     lineHeight * wrappedLines.size
@@ -301,6 +333,7 @@ fun KaraokeLineText(
                 val activeColor = LocalContentColor.current
 
                 Canvas(
+                    // TODO: Extract 8 to a constant
                     modifier = Modifier.size(maxWidth, (totalHeight + 8).toDp())
                 ) {
                     // ✨ 动态的 currentTimeMs 只在绘制时传入

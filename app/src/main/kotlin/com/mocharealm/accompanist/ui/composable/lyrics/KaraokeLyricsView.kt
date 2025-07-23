@@ -79,8 +79,6 @@ fun KaraokeLyricsView(
         }
     }
 
-
-
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
@@ -91,7 +89,7 @@ fun KaraokeLyricsView(
             key = { index, line -> "${line.start}-${line.end}-$index" }
         ) { index, line ->
             if (line is KaraokeLine) {
-                // 判断是否为当前焦点行（用于伴唱显示）
+                // Check if the line is the current focus line
                 val isCurrentFocusLine = remember(index, focusedLineIndex) {
                     index == focusedLineIndex ||
                     (line.isAccompaniment && kotlin.math.abs(index - focusedLineIndex) <= 1)
