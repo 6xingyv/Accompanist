@@ -38,7 +38,7 @@ fun KaraokeLyricsView(
     onLineClicked: (ISyncedLine) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currentTimeMs = currentPosition.toInt()
+    val currentTimeMs by rememberUpdatedState(currentPosition.toInt())
 
     val focusedLineIndex
            = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
@@ -97,11 +97,13 @@ fun KaraokeLyricsView(
                     (line.isAccompaniment && kotlin.math.abs(index - focusedLineIndex) <= 1)
                 }
 
+                val lineTimeMs = if (isCurrentFocusLine) currentTimeMs else 0
+
                 if (!line.isAccompaniment) {
                     KaraokeLineText(
                         line = line,
                         onLineClicked = onLineClicked,
-                        currentTimeMs = currentTimeMs,
+                        currentTimeMs = lineTimeMs,
                         modifier = Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                     )
                 } else {
@@ -133,7 +135,7 @@ fun KaraokeLyricsView(
                         KaraokeLineText(
                             line = line,
                             onLineClicked = onLineClicked,
-                            currentTimeMs = currentTimeMs,
+                            currentTimeMs = lineTimeMs,
                             Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                         )
                     }
