@@ -1,6 +1,7 @@
 package com.mocharealm.accompanist.ui.composable.lyrics
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextLayoutResult
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
 
 
@@ -9,5 +10,5 @@ data class SyllableLayout(
     val syllable: KaraokeSyllable,
     val position: Offset,
     val size: androidx.compose.ui.geometry.Size,
-    val progress: Float
+    val textLayoutResult: TextLayoutResult
 )

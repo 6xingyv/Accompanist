@@ -20,21 +20,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -54,13 +56,8 @@ private fun calculateWrappedLines(
     syllables: List<KaraokeSyllable>,
     availableWidthPx: Float,
     textMeasurer: TextMeasurer,
-    isAccompaniment: Boolean
+    style: TextStyle
 ): List<WrappedLine> {
-    val style = if (isAccompaniment) {
-        TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    } else {
-        TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    }
 
     val lines = mutableListOf<WrappedLine>()
     var currentLine = mutableListOf<KaraokeSyllable>()
@@ -92,16 +89,10 @@ private fun calculateWrappedLines(
 private fun calculateStaticLineLayout(
     wrappedLines: List<WrappedLine>,
     textMeasurer: TextMeasurer,
-    isAccompaniment: Boolean,
     lineAlignment: Alignment,
-    canvasWidth: Float
+    canvasWidth: Float,
+    style: TextStyle
 ): List<List<SyllableLayout>> {
-    val style = if (isAccompaniment) {
-        TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    } else {
-        TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    }
-
     val lineHeight = textMeasurer.measure("M", style).size.height.toFloat()
 
     return wrappedLines.mapIndexed { lineIndex, wrappedLine ->
@@ -119,7 +110,7 @@ private fun calculateStaticLineLayout(
                 syllable = syllable,
                 position = Offset(currentX, lineY),
                 size = Size(result.size.width.toFloat(), result.size.height.toFloat()),
-                progress = 0f // progress 在这里是临时的，将在绘制时动态计算
+                textLayoutResult = result
             )
             currentX += layout.size.width
             layout
@@ -194,17 +185,9 @@ private fun createLineGradientBrush(
 
 private fun DrawScope.drawLine(
     lineLayouts: List<List<SyllableLayout>>,
-    textMeasurer: TextMeasurer,
-    isAccompaniment: Boolean,
     currentTimeMs: Int,
     color: Color
 ) {
-    val style = if (isAccompaniment) {
-        TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    } else {
-        TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = SFPro)
-    }
-
     lineLayouts.forEach { rowLayouts ->
         // Calculate the progress brush
         val progressBrush = createLineGradientBrush(rowLayouts, currentTimeMs)
@@ -217,12 +200,10 @@ private fun DrawScope.drawLine(
             val finalPosition =
                 syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
 
-            val result = textMeasurer.measure(syllableLayout.syllable.content, style)
             drawText(
-                textLayoutResult = result,
+                textLayoutResult = syllableLayout.textLayoutResult,
                 brush = Brush.horizontalGradient(0f to color, 1f to color),
                 topLeft = finalPosition,
-                blendMode = BlendMode.Plus
             )
         }
 
@@ -258,10 +239,11 @@ fun KaraokeLineText(
     )
 
     val alphaAnimation by animateFloatAsState(
-        targetValue = when {
-            !line.isAccompaniment -> if (isFocused) 1f else 0.6f
-            else -> if (isFocused) 0.6f else 0.3f
-        },
+        targetValue =
+            if (!line.isAccompaniment)
+                if (isFocused) 1f else 0.4f
+            else
+                if (isFocused) 0.6f else 0.2f,
         label = "alpha"
     )
 
@@ -283,7 +265,6 @@ fun KaraokeLineText(
                         if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
                         1f
                     )
-                    compositingStrategy = CompositingStrategy.Offscreen
                 },
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalAlignment = if (line.alignment == KaraokeAlignment.Start) Alignment.Start else Alignment.End
@@ -292,13 +273,28 @@ fun KaraokeLineText(
                 val density = LocalDensity.current
                 val availableWidthPx = with(density) { maxWidth.toPx() }
 
-                // ✨ 核心修改点：所有布局计算的 remember key 不再包含 currentTimeMs
+                val textStyle = remember(line.isAccompaniment) {
+                    if (line.isAccompaniment) {
+                        TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SFPro
+                        )
+                    } else {
+                        TextStyle(
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SFPro
+                        )
+                    }
+                }
+
                 val wrappedLines = remember(line.syllables, availableWidthPx, textMeasurer) {
                     calculateWrappedLines(
                         syllables = line.syllables,
                         availableWidthPx = availableWidthPx,
                         textMeasurer = textMeasurer,
-                        isAccompaniment = line.isAccompaniment
+                        style = textStyle
                     )
                 }
 
@@ -306,9 +302,9 @@ fun KaraokeLineText(
                     calculateStaticLineLayout(
                         wrappedLines = wrappedLines,
                         textMeasurer = textMeasurer,
-                        isAccompaniment = line.isAccompaniment,
                         lineAlignment = if (line.alignment == KaraokeAlignment.End) Alignment.TopEnd else Alignment.TopStart,
-                        canvasWidth = availableWidthPx
+                        canvasWidth = availableWidthPx,
+                        style = textStyle
                     )
                 }
 
@@ -336,11 +332,8 @@ fun KaraokeLineText(
                     // TODO: Extract 8 to a constant
                     modifier = Modifier.size(maxWidth, (totalHeight + 8).toDp())
                 ) {
-                    // ✨ 动态的 currentTimeMs 只在绘制时传入
                     drawLine(
                         lineLayouts = staticLineLayouts,
-                        textMeasurer = textMeasurer,
-                        isAccompaniment = line.isAccompaniment,
                         currentTimeMs = currentTimeMs,
                         color = activeColor
                     )
@@ -390,7 +383,7 @@ private fun trimDisplayLineTrailingSpaces(
 }
 
 @Composable
-private fun Int.toDp(): androidx.compose.ui.unit.Dp {
+private fun Int.toDp(): Dp {
     val density = LocalDensity.current
     return with(density) { this@toDp.toDp() }
 }
