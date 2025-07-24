@@ -122,9 +122,9 @@ private fun createLineGradientBrush(
     lineLayout: List<SyllableLayout>,
     currentTimeMs: Int,
 ): Brush {
-    val activeColor = Color.Transparent
-    val inactiveColor = Color.White.copy(alpha = 0.5f)
-    val minFadeWidth = 8f
+    val activeColor = Color.White.copy(0f)
+    val inactiveColor = Color.White.copy(0.8f)
+    val minFadeWidth = 30f
 
     if (lineLayout.isEmpty()) {
         return Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
@@ -164,11 +164,11 @@ private fun createLineGradientBrush(
     }
 
     val fadeRange = run {
-        val fadeWidthPx = maxOf(totalWidth * 0.05f, minFadeWidth)
+        val fadeWidthPx = maxOf(totalWidth * 0.2f, minFadeWidth)
         (fadeWidthPx / totalWidth).coerceAtMost(1f)
     }
 
-    return when(lineProgress) {
+    return when (lineProgress) {
         0f -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
         1f -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
         else -> Brush.horizontalGradient(
@@ -250,7 +250,50 @@ fun KaraokeLineText(
     Box(
         Modifier
             .fillMaxWidth()
+            .drawWithCache {
+                val graphicsLayer = obtainGraphicsLayer()
+                graphicsLayer.apply {
+                    record {
+                        drawContent()
+                    }
+                    blendMode = BlendMode.Plus
+                    compositingStrategy =
+                        androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
+
+                }
+                onDrawWithContent {
+                    drawLayer(graphicsLayer)
+                }
+            }
             .clip(RoundedCornerShape(8.dp))
+//            .drawWithCache {
+//                // Example that shows how to redirect rendering to an Android Picture and then
+//                // draw the picture into the original destination
+//                // Note:
+//                // Canvas#drawPicture is supported with hardware acceleration on Android API 23+
+//                // Check
+//                // https://developer.android.com/topic/performance/hardware-accel#drawing-support
+//                // for details of which drawing operations are supported with hardware acceleration
+//                val picture = android.graphics.Picture()
+//                val width = this.size.width.toInt()
+//                val height = this.size.height.toInt()
+//                val graphicsLayer = obtainGraphicsLayer()
+//                graphicsLayer.apply {
+//                    this.blendMode = blendMode
+//                }
+//                onDrawWithContent {
+//                    val pictureCanvas =
+//                        androidx.compose.ui.graphics.Canvas(picture.beginRecording(width, height))
+//                    draw(this, this.layoutDirection, pictureCanvas, this.size, graphicsLayer) {
+//                        this@onDrawWithContent.drawContent()
+//                    }
+//                    picture.endRecording()
+//
+//                    drawIntoCanvas {
+//                        it.nativeCanvas.drawPicture(picture)
+//                    }
+//                }
+//            }
             .clickable { onLineClicked(line) }
     ) {
         Column(
