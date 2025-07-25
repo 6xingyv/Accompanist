@@ -10,13 +10,19 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.mocharealm.accompanist.domain.model.MusicItem
+import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
+import com.mocharealm.accompanist.lyrics.parser.AutoParser
 import com.mocharealm.accompanist.service.PlaybackService
+import com.mocharealm.accompanist.ui.composable.background.calculateAverageBrightness
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,52 +30,73 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+// 你可以把这些 data class 放在 ViewModel 文件的顶部，或者单独的文件里
+
+// 播放相关的核心状态
 data class PlaybackState(
-    val isReady: Boolean = false,
     val isPlaying: Boolean = false,
     val position: Long = 0L,
     val duration: Long = 0L,
-    val artwork: ImageBitmap? = null,
     val lastUpdateTime: Long = 0L
 )
 
+// 视觉背景相关的状态
+data class BackgroundUiState(
+    val artwork: ImageBitmap? = null,
+    val isBright: Boolean = false
+)
+
+// UI需要的所有状态的集合
+data class PlayerUiState(
+    val isReady: Boolean = false, // PlayerController 是否准备好
+    val showSelectionDialog: Boolean = true,
+    val playbackState: PlaybackState = PlaybackState(),
+    val backgroundState: BackgroundUiState = BackgroundUiState(),
+    val lyrics: SyncedLyrics? = null
+)
+
+// PlayerViewModel.kt
+
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _playbackState = MutableStateFlow(PlaybackState())
-    val playbackState = _playbackState.asStateFlow()
+    // ✨ 1. 使用新的 PlayerUiState 作为唯一的状态源
+    private val _uiState = MutableStateFlow(PlayerUiState())
+    val uiState = _uiState.asStateFlow()
 
     private var positionUpdateJob: Job? = null
     private var controller: MediaController? = null
 
-    // ✨ 1. 添加私有变量来缓存上一次的封面数据和解码后的 Bitmap
+    // 封面缓存逻辑保持，因为它做得很好
     private var lastArtworkData: ByteArray? = null
     private var cachedArtworkBitmap: ImageBitmap? = null
 
+    // ✨ 2. 添加一个 AssetManager 的引用，用于加载歌词
+    private val assets: android.content.res.AssetManager = application.assets
+
     init {
-        val sessionToken = SessionToken(application, ComponentName(application, PlaybackService::class.java))
+        val sessionToken =
+            SessionToken(application, ComponentName(application, PlaybackService::class.java))
         val controllerFuture = MediaController.Builder(application, sessionToken).buildAsync()
 
         controllerFuture.addListener({
             controller = controllerFuture.get()
             controller?.addListener(playerListener)
-            _playbackState.value = _playbackState.value.copy(isReady = true)
-            updateState()
+            _uiState.value = _uiState.value.copy(isReady = true) // 通知UI Controller已就绪
+            updatePlaybackState()
         }, MoreExecutors.directExecutor())
     }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) {
-            updateState()
+            updatePlaybackState()
             if (playing) startPositionUpdates() else stopPositionUpdates()
         }
 
         override fun onEvents(player: Player, events: Player.Events) {
-            // 当 onMediaMetadataChanged 事件发生时，强制更新封面
             if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED)) {
-                // 清空缓存，强制下次 updateState 重新解码
-                lastArtworkData = null
+                lastArtworkData = null // 清空缓存，强制下次更新
             }
-            updateState()
+            updatePlaybackState()
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -77,49 +104,115 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun updateState() {
+    // ✨ 3. 将 updateState 重命名为 updatePlaybackState，让其职责更清晰
+    private fun updatePlaybackState() {
         controller?.let {
-            // ✨ 2. 在更新状态前，处理封面缓存
             val newArtworkData = it.mediaMetadata.artworkData
-
-            // 只有当新的封面数据不为空，且与上次缓存的数据不同时，才解码新图片
             if (newArtworkData != null && !newArtworkData.contentEquals(lastArtworkData)) {
                 lastArtworkData = newArtworkData
-                cachedArtworkBitmap = BitmapFactory.decodeByteArray(newArtworkData, 0, newArtworkData.size).asImageBitmap()
-            } else if (newArtworkData == null) {
-                // 如果封面被移除，则清空缓存
+                cachedArtworkBitmap =
+                    BitmapFactory.decodeByteArray(newArtworkData, 0, newArtworkData.size)
+                        .asImageBitmap()
+                updateBackgroundState(cachedArtworkBitmap)
+            } else if (newArtworkData == null && lastArtworkData != null) {
                 lastArtworkData = null
                 cachedArtworkBitmap = null
+                updateBackgroundState(null)
             }
 
-            // ✨ 3. 更新 PlaybackState，使用缓存的 artwork
-            _playbackState.value = _playbackState.value.copy(
-                isPlaying = it.isPlaying,
-                position = it.currentPosition,
-                duration = it.duration.takeIf { d -> d != C.TIME_UNSET } ?: 0L,
-                artwork = cachedArtworkBitmap, // <-- 使用缓存的 bitmap
-                lastUpdateTime = System.currentTimeMillis()
+            _uiState.value = _uiState.value.copy(
+                playbackState = _uiState.value.playbackState.copy(
+                    isPlaying = it.isPlaying,
+                    position = it.currentPosition,
+                    duration = it.duration.takeIf { d -> d != C.TIME_UNSET } ?: 0L,
+                    lastUpdateTime = System.currentTimeMillis()
+                )
             )
         }
     }
 
-    private fun startPositionUpdates() {
-        positionUpdateJob?.cancel()
-        positionUpdateJob = viewModelScope.launch {
-            while (isActive) {
-                updateState()
-                delay(500)
+    fun updateBackgroundState(artwork: ImageBitmap?) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val isBright = if (artwork != null) {
+                calculateAverageBrightness(artwork) > 0.65f
+            } else {
+                false
+            }
+            _uiState.value = _uiState.value.copy(
+                backgroundState = BackgroundUiState(artwork = artwork, isBright = isBright)
+            )
+        }
+    }
+
+    // ✨ 6. 新增：加载歌词的公共函数
+    fun loadLyricsFor(item: MusicItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val lyricsData = assets.open(item.lyrics).bufferedReader().use { it.readLines() }
+                val lyricsRaw = AutoParser.parse(lyricsData)
+
+                val finalLyrics = if (item.translation != null) {
+                    val translationData =
+                        assets.open(item.translation).bufferedReader().use { it.readLines() }
+                    val translationRaw = AutoParser.parse(translationData)
+                    val translationMap =
+                        translationRaw.lines.associateBy { (it as SyncedLine).start }
+                    SyncedLyrics(
+                        lyricsRaw.lines.map { line ->
+                            val karaokeLine = line as KaraokeLine
+                            val translationContent =
+                                (translationMap[karaokeLine.start] as SyncedLine?)?.content
+                            karaokeLine.copy(translation = translationContent)
+                        })
+                } else {
+                    lyricsRaw
+                }
+                _uiState.value = _uiState.value.copy(lyrics = finalLyrics)
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Failed to load or parse lyrics", e)
+                _uiState.value = _uiState.value.copy(lyrics = null)
             }
         }
     }
 
-    // ... 其他方法保持不变 ...
+    // ✨ 7. 优化：startPositionUpdates 只更新位置，避免不必要的重复计算
+    private fun startPositionUpdates() {
+        positionUpdateJob?.cancel()
+        positionUpdateJob = viewModelScope.launch {
+            while (isActive) {
+                controller?.let {
+                    _uiState.value = _uiState.value.copy(
+                        playbackState = _uiState.value.playbackState.copy(
+                            position = it.currentPosition,
+                            lastUpdateTime = System.currentTimeMillis()
+                        )
+                    )
+                }
+                delay(500) // 位置更新频率可以根据需要调整
+            }
+        }
+    }
+
+    fun onSongSelected() {
+        _uiState.value = _uiState.value.copy(showSelectionDialog = false)
+    }
+
+    fun setMediaItemAndPlay(item: MusicItem) {
+        controller?.setMediaItem(item.mediaItem)
+        controller?.prepare()
+        controller?.playWhenReady = true
+        loadLyricsFor(item) // ✨ 播放新项目时，自动加载歌词
+    }
+
     private fun stopPositionUpdates() {
         positionUpdateJob?.cancel()
     }
-    fun setMediaItem(item: MediaItem) { controller?.setMediaItem(item) }
-    fun prepare() { controller?.prepare() }
-    fun playWhenReady(play: Boolean) { controller?.playWhenReady = play }
-    fun seekTo(position: Long) { controller?.seekTo(position) }
-    override fun onCleared() { controller?.release() }
+
+    fun seekTo(position: Long) {
+        controller?.seekTo(position)
+    }
+
+    override fun onCleared() {
+        controller?.release()
+    }
 }
