@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             )
                         }
+
                         uiState.lyrics?.let { lyrics ->
                             KaraokeLyricsView(
                                 listState = listState,

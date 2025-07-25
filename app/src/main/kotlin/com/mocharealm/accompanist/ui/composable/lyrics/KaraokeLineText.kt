@@ -246,7 +246,7 @@ private fun DrawScope.drawLine(
                             1f
                         )
                     val floatOffset =
-                        4f * easeOutCubic(1.0f - awesomeProgress)
+                        4f * DipAndRise.transform(1.0f - awesomeProgress)
                     val scale = 1f + Swell.transform(awesomeProgress)
 
                     val yPos = syllableLayout.position.y + floatOffset

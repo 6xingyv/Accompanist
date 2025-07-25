@@ -58,19 +58,15 @@ data class PlayerUiState(
 // PlayerViewModel.kt
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-
-    // ✨ 1. 使用新的 PlayerUiState 作为唯一的状态源
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState = _uiState.asStateFlow()
 
     private var positionUpdateJob: Job? = null
     private var controller: MediaController? = null
 
-    // 封面缓存逻辑保持，因为它做得很好
     private var lastArtworkData: ByteArray? = null
     private var cachedArtworkBitmap: ImageBitmap? = null
 
-    // ✨ 2. 添加一个 AssetManager 的引用，用于加载歌词
     private val assets: android.content.res.AssetManager = application.assets
 
     init {
@@ -104,7 +100,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ✨ 3. 将 updateState 重命名为 updatePlaybackState，让其职责更清晰
     private fun updatePlaybackState() {
         controller?.let {
             val newArtworkData = it.mediaMetadata.artworkData
@@ -175,7 +170,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ✨ 7. 优化：startPositionUpdates 只更新位置，避免不必要的重复计算
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
         positionUpdateJob = viewModelScope.launch {
@@ -201,7 +195,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         controller?.setMediaItem(item.mediaItem)
         controller?.prepare()
         controller?.playWhenReady = true
-        loadLyricsFor(item) // ✨ 播放新项目时，自动加载歌词
+        loadLyricsFor(item)
     }
 
     private fun stopPositionUpdates() {
