@@ -45,8 +45,8 @@ import com.mocharealm.accompanist.lyrics.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
+import com.mocharealm.accompanist.ui.composable.easing.NewtonPolynomialInterpolationEasing
 import com.mocharealm.accompanist.ui.theme.SFPro
-import kotlin.math.abs
 import kotlin.math.pow
 
 data class WrappedLine(
@@ -247,7 +247,7 @@ private fun DrawScope.drawLine(
                         )
                     val floatOffset =
                         4f * easeOutCubic(1.0f - awesomeProgress)
-                    val scale = 1f + Swell.evaluate(awesomeProgress.toDouble()).toFloat()
+                    val scale = 1f + Swell.transform(awesomeProgress)
 
                     val yPos = syllableLayout.position.y + floatOffset
                     val xPos = syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(
@@ -255,7 +255,7 @@ private fun DrawScope.drawLine(
                         usePrimaryDirection = true
                     )
 
-                    val blurRadius = 10f * Bounce.evaluate(awesomeProgress.toDouble()).toFloat()
+                    val blurRadius = 10f * Bounce.transform(awesomeProgress)
                     val shadow = Shadow(
                         color = color,
                         offset = Offset(0f, 0f),
@@ -506,111 +506,21 @@ private fun IntSize.toDpSize(): DpSize {
     }
 }
 
-private fun createCubicBezier(x1: Float, y1: Float, x2: Float, y2: Float): (Float) -> Float {
-    // A straight line is a special case.
-    if (x1 == y1 && x2 == y2) {
-        return { x -> x }
-    }
 
-    // Pre-calculate coefficients for the Bezier formula
-    val cx = 3.0f * x1
-    val bx = 3.0f * (x2 - x1) - cx
-    val ax = 1.0f - cx - bx
-
-    val cy = 3.0f * y1
-    val by = 3.0f * (y2 - y1) - cy
-    val ay = 1.0f - cy - by
-
-    // Computes the Y value for a given t
-    fun sampleCurveY(t: Float): Float {
-        return ((ay * t + by) * t + cy) * t
-    }
-
-    // Computes the X value for a given t
-    fun sampleCurveX(t: Float): Float {
-        return ((ax * t + bx) * t + cx) * t
-    }
-
-    // Computes the derivative of X for a given t
-    fun sampleCurveDerivativeX(t: Float): Float {
-        return (3.0f * ax * t + 2.0f * bx) * t + cx
-    }
-
-    fun solveTForX(x: Float): Float {
-        var t2 = x
-        for (i in 0..7) { // 8 iterations are generally enough for precision
-            val x2 = sampleCurveX(t2) - x
-            // Stop if we're close enough
-            if (abs(x2) < 1e-6f) {
-                return t2
-            }
-            val d2 = sampleCurveDerivativeX(t2)
-            // Avoid division by zero
-            if (abs(d2) < 1e-6f) {
-                break
-            }
-            t2 -= x2 / d2
-        }
-        return t2
-    }
-
-    // The final function that takes x and returns y
-    return { x -> sampleCurveY(solveTForX(x)) }
-}
-
-class NewtonPolynomialInterpolation(points: List<Pair<Double, Double>>) {
-
-    constructor(vararg points: Pair<Double, Double>) : this(points.toList())
-
-    private val dividedDifferences: List<Double>
-    private val xValues: List<Double>
-
-    init {
-        // 确保没有重复的 x 值，否则无法插值
-        require(points.map { it.first }.toSet().size == points.size) {
-            "All x-coordinates of the points must be unique."
-        }
-
-        val n = points.size
-        xValues = points.map { it.first }
-        val yValues = points.map { it.second }.toMutableList()
-
-        // 计算差商表
-        val coeffs = mutableListOf<Double>()
-        for (i in 0 until n) {
-            coeffs.add(yValues[i])
-            for (j in (i + 1) until n) {
-                yValues[j] = (yValues[j] - yValues[j - 1]) / (xValues[j] - xValues[j - i - 1])
-            }
-        }
-        dividedDifferences = coeffs
-    }
-
-    fun evaluate(x: Double): Double {
-        val n = xValues.size - 1
-        var result = dividedDifferences[n]
-        for (i in (n - 1) downTo 0) {
-            result = result * (x - xValues[i]) + dividedDifferences[i]
-        }
-        return result
-    }
-}
-
-private val DipAndRise = NewtonPolynomialInterpolation(
+private val DipAndRise = NewtonPolynomialInterpolationEasing(
     0.0 to 0.0,      // (输入=0，输出=0)
     0.5 to -0.25,    // (输入=0.5，输出=-0.25)
     1.0 to 1.0       // (输入=1.0，输出=1.0)
 
 )
 
-private val Swell = NewtonPolynomialInterpolation(
+private val Swell = NewtonPolynomialInterpolationEasing(
     0.0 to 0.0,
     0.7 to 0.012,
     1.0 to 0.0
-
 )
 
-private val Bounce = NewtonPolynomialInterpolation(
+private val Bounce = NewtonPolynomialInterpolationEasing(
     0.0 to 0.0,
     0.5 to 1.0,
     1.0 to 0.0

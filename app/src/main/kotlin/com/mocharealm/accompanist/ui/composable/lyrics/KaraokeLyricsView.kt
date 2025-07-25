@@ -145,7 +145,7 @@ fun KaraokeLyricsView(
                 } else {
                     listState.animateScrollToItem(focusedLineIndex)
                 }
-            } catch (e: Exception) { }
+            } catch (_: Exception) { }
         }
     }
 
