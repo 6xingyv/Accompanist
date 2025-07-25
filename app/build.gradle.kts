@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.mocharealm.accompanist"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mocharealm.accompanist"
         minSdk = 31
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -58,23 +58,25 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+//    splits {
+//        abi {
+//            isEnable = true
+//            isUniversalApk = true
+//            //include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+//            reset()
+//        }
+//    }
 }
 
 dependencies {
