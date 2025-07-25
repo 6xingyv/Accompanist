@@ -49,7 +49,7 @@ fun FlowingLightBackground(
         modifier = modifier.fillMaxSize()
     ) { currentState ->
         val colorFilter = if (currentState.isBright) {
-            ColorFilter.tint(Color.Black.copy(alpha = 0.3f), BlendMode.Darken)
+            ColorFilter.tint(Color.Black.copy(alpha = 0.1f), BlendMode.Darken)
         } else {
             null
         }
@@ -57,10 +57,6 @@ fun FlowingLightBackground(
         Box(modifier = Modifier.fillMaxSize()) {
             val baseModifier = Modifier.scale(3f)
 
-//            var rotation1 by remember { mutableFloatStateOf(0f) }
-//            LaunchedEffect(Unit) {
-//                while (true) { rotation1 += 0.3f; awaitFrame() }
-//            }
             Image(
                 bitmap = currentState.bitmap, // 使用 currentState 中的 bitmap
                 contentDescription = "",
@@ -71,10 +67,6 @@ fun FlowingLightBackground(
 //                    .graphicsLayer { rotationZ = rotation1 }
             )
 
-//            var rotation2 by remember { mutableFloatStateOf(0f) }
-//            LaunchedEffect(Unit) {
-//                while (true) { rotation2 -= 0.2f; awaitFrame() }
-//            }
             Image(
                 bitmap = currentState.bitmap,
                 contentDescription = "",
@@ -85,10 +77,6 @@ fun FlowingLightBackground(
 //                    .graphicsLayer { rotationZ = rotation2 }
             )
 
-//            var rotation3 by remember { mutableFloatStateOf(0f) }
-//            LaunchedEffect(Unit) {
-//                while (true) { rotation3 += 0.1f; awaitFrame() }
-//            }
             Image(
                 bitmap = currentState.bitmap,
                 contentDescription = "",

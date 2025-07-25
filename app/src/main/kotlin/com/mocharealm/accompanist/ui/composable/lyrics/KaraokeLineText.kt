@@ -20,16 +20,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -46,6 +46,8 @@ import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.ui.theme.SFPro
+import kotlin.math.abs
+import kotlin.math.pow
 
 data class WrappedLine(
     val syllables: List<KaraokeSyllable>,
@@ -60,7 +62,7 @@ private fun calculateWrappedLines(
 ): List<WrappedLine> {
 
     val lines = mutableListOf<WrappedLine>()
-    var currentLine = mutableListOf<KaraokeSyllable>()
+    val currentLine = mutableListOf<KaraokeSyllable>()
     var currentLineWidth = 0f
 
     syllables.forEach { syllable ->
@@ -123,7 +125,7 @@ private fun createLineGradientBrush(
     currentTimeMs: Int,
 ): Brush {
     val activeColor = Color.White.copy(0f)
-    val inactiveColor = Color.White.copy(0.8f)
+    val inactiveColor = Color.White.copy(0.6f)
     val minFadeWidth = 30f
 
     if (lineLayout.isEmpty()) {
@@ -186,7 +188,8 @@ private fun createLineGradientBrush(
 private fun DrawScope.drawLine(
     lineLayouts: List<List<SyllableLayout>>,
     currentTimeMs: Int,
-    color: Color
+    color: Color,
+    textMeasurer: TextMeasurer
 ) {
     lineLayouts.forEach { rowLayouts ->
         // Calculate the progress brush
@@ -194,25 +197,103 @@ private fun DrawScope.drawLine(
 
         // Draw syllables
         rowLayouts.forEach { syllableLayout ->
-            val progress = syllableLayout.syllable.progress(currentTimeMs)
-            // TODO: Extract 4f to a constant
-            val floatOffset = 4f * (1f - progress)
-            val finalPosition =
-                syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
+            val syllable = syllableLayout.syllable
+            val progress = syllable.progress(currentTimeMs)
 
-            drawText(
-                textLayoutResult = syllableLayout.textLayoutResult,
-                brush = Brush.horizontalGradient(0f to color, 1f to color),
-                topLeft = finalPosition,
-            )
+            fun easeOutCubic(x: Float): Float =
+                ((x).toDouble().pow(3.0)).toFloat()
+
+
+            val perCharDuration = if (syllable.content.isNotEmpty()) {
+                syllable.duration.toFloat() / syllable.content.length
+            } else {
+                0f
+            }
+
+            // Threshold for switching between animation styles.
+            // If characters are very fast (e.g., in a rap), animate the whole syllable at once.
+            val fastCharAnimationThresholdMs = 300f
+
+            if (perCharDuration <= fastCharAnimationThresholdMs && perCharDuration > 0) {
+                // Animation for the entire syllable together (when characters are fast)
+                val floatOffset = 4f * easeOutCubic(1f - progress)
+                val finalPosition =
+                    syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
+                drawText(
+                    textLayoutResult = syllableLayout.textLayoutResult,
+                    brush = Brush.horizontalGradient(0f to color, 1f to color),
+                    topLeft = finalPosition,
+                )
+            } else {
+                val textStyle = syllableLayout.textLayoutResult.layoutInput.style
+                val syllableBottomCenter = Offset(
+                    x = syllableLayout.position.x + syllableLayout.size.width / 2f,
+                    y = syllableLayout.position.y + syllableLayout.size.height
+                )
+                val awesomeDuration = syllable.duration * 0.8f
+                syllable.content.forEachIndexed { index, char ->
+                    val numChars = syllable.content.length
+                    val earliestStartTime = syllable.start
+                    val latestStartTime = syllable.end - awesomeDuration
+
+                    val charRatio = if (numChars > 1) index.toFloat() / (numChars - 1) else 0.5f
+                    val awesomeStartTime =
+                        (earliestStartTime + (latestStartTime - earliestStartTime) * charRatio).toLong()
+
+                    val awesomeProgress =
+                        ((currentTimeMs - awesomeStartTime).toFloat() / awesomeDuration).coerceIn(
+                            0f,
+                            1f
+                        )
+                    val floatOffset =
+                        4f * easeOutCubic(1.0f - awesomeProgress)
+                    val scale = 1f + Swell.evaluate(awesomeProgress.toDouble()).toFloat()
+
+                    val yPos = syllableLayout.position.y + floatOffset
+                    val xPos = syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(
+                        offset = index,
+                        usePrimaryDirection = true
+                    )
+
+                    val blurRadius = 10f * Bounce.evaluate(awesomeProgress.toDouble()).toFloat()
+                    val shadow = Shadow(
+                        color = color,
+                        offset = Offset(0f, 0f),
+                        blurRadius = blurRadius
+                    )
+
+                    val charLayoutResult = textMeasurer.measure(char.toString(), style = textStyle)
+
+                    withTransform({
+//                        // 围绕音节的底部中心进行变换
+//                        // 1. 移动到变换原点
+//                        translate(left = syllableBottomCenter.x, top = syllableBottomCenter.y)
+//                        // 2. 以原点 (0,0) 进行缩放
+                        scale(scaleX = scale, scaleY = scale, pivot = syllableBottomCenter)
+//                        // 3. 移回原位
+//                        translate(left = -syllableBottomCenter.x, top = -syllableBottomCenter.y)
+//
+//                        // 4. 最后再平移到字符的最终绘制位置
+////                        translate(left = xPos, top = yPos)
+                    }) {
+                        drawText(
+                            textLayoutResult = charLayoutResult,
+                            brush = Brush.horizontalGradient(0f to color, 1f to color),
+                            topLeft = Offset(xPos, yPos),
+                            shadow = shadow
+                        )
+                    }
+                }
+            }
         }
+
 
         // Draw the mask gradient
         val width = rowLayouts.last().position.x + rowLayouts.last().size.width
         val height = rowLayouts.maxOf { it.size.height }
         drawRect(
             brush = progressBrush,
-            topLeft = rowLayouts.first().position,
+            topLeft = rowLayouts.first().position.copy(y = rowLayouts.first().position.y - 4f),
             // TODO: Extract 8f to a constant
             size = Size(width, height + 8f), // Expand height for float & glow animation
             blendMode = BlendMode.DstOut
@@ -250,21 +331,6 @@ fun KaraokeLineText(
     Box(
         Modifier
             .fillMaxWidth()
-            .drawWithCache {
-                val graphicsLayer = obtainGraphicsLayer()
-                graphicsLayer.apply {
-                    record {
-                        drawContent()
-                    }
-                    blendMode = BlendMode.Plus
-                    compositingStrategy =
-                        androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-
-                }
-                onDrawWithContent {
-                    drawLayer(graphicsLayer)
-                }
-            }
             .clip(RoundedCornerShape(8.dp))
 //            .drawWithCache {
 //                // Example that shows how to redirect rendering to an Android Picture and then
@@ -378,7 +444,8 @@ fun KaraokeLineText(
                     drawLine(
                         lineLayouts = staticLineLayouts,
                         currentTimeMs = currentTimeMs,
-                        color = activeColor
+                        color = activeColor,
+                        textMeasurer = textMeasurer
                     )
                 }
             }
@@ -438,3 +505,113 @@ private fun IntSize.toDpSize(): DpSize {
         DpSize(width.toDp(), height.toDp())
     }
 }
+
+private fun createCubicBezier(x1: Float, y1: Float, x2: Float, y2: Float): (Float) -> Float {
+    // A straight line is a special case.
+    if (x1 == y1 && x2 == y2) {
+        return { x -> x }
+    }
+
+    // Pre-calculate coefficients for the Bezier formula
+    val cx = 3.0f * x1
+    val bx = 3.0f * (x2 - x1) - cx
+    val ax = 1.0f - cx - bx
+
+    val cy = 3.0f * y1
+    val by = 3.0f * (y2 - y1) - cy
+    val ay = 1.0f - cy - by
+
+    // Computes the Y value for a given t
+    fun sampleCurveY(t: Float): Float {
+        return ((ay * t + by) * t + cy) * t
+    }
+
+    // Computes the X value for a given t
+    fun sampleCurveX(t: Float): Float {
+        return ((ax * t + bx) * t + cx) * t
+    }
+
+    // Computes the derivative of X for a given t
+    fun sampleCurveDerivativeX(t: Float): Float {
+        return (3.0f * ax * t + 2.0f * bx) * t + cx
+    }
+
+    fun solveTForX(x: Float): Float {
+        var t2 = x
+        for (i in 0..7) { // 8 iterations are generally enough for precision
+            val x2 = sampleCurveX(t2) - x
+            // Stop if we're close enough
+            if (abs(x2) < 1e-6f) {
+                return t2
+            }
+            val d2 = sampleCurveDerivativeX(t2)
+            // Avoid division by zero
+            if (abs(d2) < 1e-6f) {
+                break
+            }
+            t2 -= x2 / d2
+        }
+        return t2
+    }
+
+    // The final function that takes x and returns y
+    return { x -> sampleCurveY(solveTForX(x)) }
+}
+
+class NewtonPolynomialInterpolation(points: List<Pair<Double, Double>>) {
+
+    constructor(vararg points: Pair<Double, Double>) : this(points.toList())
+
+    private val dividedDifferences: List<Double>
+    private val xValues: List<Double>
+
+    init {
+        // 确保没有重复的 x 值，否则无法插值
+        require(points.map { it.first }.toSet().size == points.size) {
+            "All x-coordinates of the points must be unique."
+        }
+
+        val n = points.size
+        xValues = points.map { it.first }
+        val yValues = points.map { it.second }.toMutableList()
+
+        // 计算差商表
+        val coeffs = mutableListOf<Double>()
+        for (i in 0 until n) {
+            coeffs.add(yValues[i])
+            for (j in (i + 1) until n) {
+                yValues[j] = (yValues[j] - yValues[j - 1]) / (xValues[j] - xValues[j - i - 1])
+            }
+        }
+        dividedDifferences = coeffs
+    }
+
+    fun evaluate(x: Double): Double {
+        val n = xValues.size - 1
+        var result = dividedDifferences[n]
+        for (i in (n - 1) downTo 0) {
+            result = result * (x - xValues[i]) + dividedDifferences[i]
+        }
+        return result
+    }
+}
+
+private val DipAndRise = NewtonPolynomialInterpolation(
+    0.0 to 0.0,      // (输入=0，输出=0)
+    0.5 to -0.25,    // (输入=0.5，输出=-0.25)
+    1.0 to 1.0       // (输入=1.0，输出=1.0)
+
+)
+
+private val Swell = NewtonPolynomialInterpolation(
+    0.0 to 0.0,
+    0.7 to 0.012,
+    1.0 to 0.0
+
+)
+
+private val Bounce = NewtonPolynomialInterpolation(
+    0.0 to 0.0,
+    0.5 to 1.0,
+    1.0 to 0.0
+)
