@@ -14,7 +14,6 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
 
-    // 在 Service 创建时被调用
     override fun onCreate() {
         super.onCreate()
         initializePlayerAndSession()
@@ -31,7 +30,9 @@ class PlaybackService : MediaSessionService() {
             )
             .build()
 
-        val sessionActivityIntent = Intent(this, MainActivity::class.java)
+        val sessionActivityIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
 
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
@@ -40,7 +41,6 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ✨ 3. 在构建 MediaSession 时，设置 sessionActivity
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent)
             .build()
