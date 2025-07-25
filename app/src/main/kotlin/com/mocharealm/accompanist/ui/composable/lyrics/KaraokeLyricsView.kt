@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -166,7 +167,6 @@ fun KaraokeLyricsView(
                         blendMode = BlendMode.DstIn
                     )
                 }
-                blendMode = BlendMode.Plus
             }
             onDrawWithContent {
                 drawLayer(graphicsLayer)

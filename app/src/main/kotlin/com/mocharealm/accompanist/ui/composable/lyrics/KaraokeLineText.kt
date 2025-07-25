@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -30,6 +31,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.CompositingStrategy
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -216,13 +219,14 @@ private fun DrawScope.drawLine(
 
             if (perCharDuration <= fastCharAnimationThresholdMs && perCharDuration > 0) {
                 // Animation for the entire syllable together (when characters are fast)
-                val floatOffset = 4f * easeOutCubic(1f - progress)
+                val floatOffset = 6f * easeOutCubic(1f - progress)
                 val finalPosition =
                     syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
                 drawText(
                     textLayoutResult = syllableLayout.textLayoutResult,
                     brush = Brush.horizontalGradient(0f to color, 1f to color),
                     topLeft = finalPosition,
+                    blendMode = BlendMode.Plus
                 )
             } else {
                 val textStyle = syllableLayout.textLayoutResult.layoutInput.style
@@ -246,7 +250,7 @@ private fun DrawScope.drawLine(
                             1f
                         )
                     val floatOffset =
-                        4f * DipAndRise.transform(1.0f - awesomeProgress)
+                        6f * DipAndRise.transform(1.0f - awesomeProgress)
                     val scale = 1f + Swell.transform(awesomeProgress)
 
                     val yPos = syllableLayout.position.y + floatOffset
@@ -280,7 +284,8 @@ private fun DrawScope.drawLine(
                             textLayoutResult = charLayoutResult,
                             brush = Brush.horizontalGradient(0f to color, 1f to color),
                             topLeft = Offset(xPos, yPos),
-                            shadow = shadow
+                            shadow = shadow,
+                            blendMode = BlendMode.Plus
                         )
                     }
                 }
@@ -509,14 +514,14 @@ private fun IntSize.toDpSize(): DpSize {
 
 private val DipAndRise = NewtonPolynomialInterpolationEasing(
     0.0 to 0.0,      // (输入=0，输出=0)
-    0.5 to -0.25,    // (输入=0.5，输出=-0.25)
+    0.5 to -0.5,    // (输入=0.5，输出=-0.25)
     1.0 to 1.0       // (输入=1.0，输出=1.0)
 
 )
 
 private val Swell = NewtonPolynomialInterpolationEasing(
     0.0 to 0.0,
-    0.7 to 0.012,
+    0.7 to 0.02,
     1.0 to 0.0
 )
 
