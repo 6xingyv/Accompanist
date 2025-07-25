@@ -90,6 +90,12 @@ class MainActivity : ComponentActivity() {
                     MediaItem.fromUri("asset:///me.mp3"),
                     "me.lys",
                     "me-translation.lrc"
+                ),
+                MusicItem(
+                    "Golden Hour",
+                    "TTML v1",
+                    MediaItem.fromUri("asset:///golden-hour.m4a"),
+                    "golden-hour.ttml"
                 )
             )
 
