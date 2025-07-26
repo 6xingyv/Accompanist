@@ -39,3 +39,22 @@ class NewtonPolynomialInterpolationEasing(points: List<Pair<Double, Double>>): E
         return result.toFloat()
     }
 }
+
+val DipAndRise = NewtonPolynomialInterpolationEasing(
+    0.0 to 0.0,      // (输入=0，输出=0)
+    0.5 to -0.5,    // (输入=0.5，输出=-0.25)
+    1.0 to 1.0       // (输入=1.0，输出=1.0)
+
+)
+
+val Swell = NewtonPolynomialInterpolationEasing(
+    0.0 to 0.0,
+    0.7 to 0.02,
+    1.0 to 0.0
+)
+
+val Bounce = NewtonPolynomialInterpolationEasing(
+    0.0 to 0.0,
+    0.6 to 1.0,
+    1.0 to 0.0
+)
