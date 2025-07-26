@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -29,16 +28,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.CompositingStrategy
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
@@ -48,9 +47,11 @@ import com.mocharealm.accompanist.lyrics.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
-import com.mocharealm.accompanist.ui.composable.easing.NewtonPolynomialInterpolationEasing
+import com.mocharealm.accompanist.ui.composable.easing.Bounce
+import com.mocharealm.accompanist.ui.composable.easing.DipAndRise
+import com.mocharealm.accompanist.ui.composable.easing.EasingOutCubic
+import com.mocharealm.accompanist.ui.composable.easing.Swell
 import com.mocharealm.accompanist.ui.theme.SFPro
-import kotlin.math.pow
 
 data class WrappedLine(
     val syllables: List<KaraokeSyllable>,
@@ -203,8 +204,6 @@ private fun DrawScope.drawLine(
             val syllable = syllableLayout.syllable
             val progress = syllable.progress(currentTimeMs)
 
-            fun easeOutCubic(x: Float): Float =
-                ((x).toDouble().pow(3.0)).toFloat()
 
 
             val perCharDuration = if (syllable.content.isNotEmpty()) {
@@ -215,20 +214,10 @@ private fun DrawScope.drawLine(
 
             // Threshold for switching between animation styles.
             // If characters are very fast (e.g., in a rap), animate the whole syllable at once.
-            val fastCharAnimationThresholdMs = 300f
+            val fastCharAnimationThresholdMs = 200f
 
-            if (perCharDuration <= fastCharAnimationThresholdMs && perCharDuration > 0) {
-                // Animation for the entire syllable together (when characters are fast)
-                val floatOffset = 6f * easeOutCubic(1f - progress)
-                val finalPosition =
-                    syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
-                drawText(
-                    textLayoutResult = syllableLayout.textLayoutResult,
-                    brush = Brush.horizontalGradient(0f to color, 1f to color),
-                    topLeft = finalPosition,
-                    blendMode = BlendMode.Plus
-                )
-            } else {
+            if (perCharDuration > fastCharAnimationThresholdMs && syllable.duration >= 1000) {
+
                 val textStyle = syllableLayout.textLayoutResult.layoutInput.style
                 val syllableBottomCenter = Offset(
                     x = syllableLayout.position.x + syllableLayout.size.width / 2f,
@@ -273,7 +262,7 @@ private fun DrawScope.drawLine(
 //                        // 1. 移动到变换原点
 //                        translate(left = syllableBottomCenter.x, top = syllableBottomCenter.y)
 //                        // 2. 以原点 (0,0) 进行缩放
-                        scale(scaleX = scale, scaleY = scale, pivot = syllableBottomCenter)
+                        scale(scale = scale, pivot = syllableBottomCenter)
 //                        // 3. 移回原位
 //                        translate(left = -syllableBottomCenter.x, top = -syllableBottomCenter.y)
 //
@@ -289,6 +278,15 @@ private fun DrawScope.drawLine(
                         )
                     }
                 }
+            } else { val floatOffset = 6f * EasingOutCubic.transform(1f - progress)
+                val finalPosition =
+                    syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
+                drawText(
+                    textLayoutResult = syllableLayout.textLayoutResult,
+                    brush = Brush.horizontalGradient(0f to color, 1f to color),
+                    topLeft = finalPosition,
+                    blendMode = BlendMode.Plus
+                )
             }
         }
 
@@ -298,9 +296,9 @@ private fun DrawScope.drawLine(
         val height = rowLayouts.maxOf { it.size.height }
         drawRect(
             brush = progressBrush,
-            topLeft = rowLayouts.first().position.copy(y = rowLayouts.first().position.y - 4f),
+            topLeft = rowLayouts.first().position.copy(y = rowLayouts.first().position.y),
             // TODO: Extract 8f to a constant
-            size = Size(width, height + 8f), // Expand height for float & glow animation
+            size = Size(width, height + 12f), // Expand height for float & glow animation
             blendMode = BlendMode.DstOut
         )
     }
@@ -392,13 +390,15 @@ fun KaraokeLineText(
                         TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = SFPro
+                            fontFamily = SFPro,
+                            textMotion = TextMotion.Animated
                         )
                     } else {
                         TextStyle(
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = SFPro
+                            fontFamily = SFPro,
+                            textMotion = TextMotion.Animated
                         )
                     }
                 }
@@ -512,21 +512,3 @@ private fun IntSize.toDpSize(): DpSize {
 }
 
 
-private val DipAndRise = NewtonPolynomialInterpolationEasing(
-    0.0 to 0.0,      // (输入=0，输出=0)
-    0.5 to -0.5,    // (输入=0.5，输出=-0.25)
-    1.0 to 1.0       // (输入=1.0，输出=1.0)
-
-)
-
-private val Swell = NewtonPolynomialInterpolationEasing(
-    0.0 to 0.0,
-    0.7 to 0.02,
-    1.0 to 0.0
-)
-
-private val Bounce = NewtonPolynomialInterpolationEasing(
-    0.0 to 0.0,
-    0.5 to 1.0,
-    1.0 to 0.0
-)

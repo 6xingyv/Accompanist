@@ -10,16 +10,27 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +42,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
@@ -93,7 +106,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 MusicItem(
                     "Golden Hour",
-                    "TTML v1",
+                    "TTML(AMLL)",
                     MediaItem.fromUri("asset:///golden-hour.m4a"),
                     "golden-hour.ttml"
                 )
@@ -129,40 +142,89 @@ class MainActivity : ComponentActivity() {
                         uiState.backgroundState.artwork?.let { bitmap ->
                             FlowingLightBackground(
                                 state = BackgroundVisualState(
-                                    bitmap,
-                                    uiState.backgroundState.isBright
+                                    bitmap, uiState.backgroundState.isBright
                                 )
                             )
                         }
-
-                        uiState.lyrics?.let { lyrics ->
-                            KaraokeLyricsView(
-                                listState = listState,
-                                lyrics = lyrics,
-                                currentPosition = animatedPosition,
-                                onLineClicked = { line ->
-                                    playerViewModel.seekTo(line.start.toLong())
-                                },
+                        Column {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .padding(horizontal = 12.dp)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                                    .statusBarsPadding()
+                                    .padding(vertical = 16.dp, horizontal = 24.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    uiState.backgroundState.artwork?.let { bitmap ->
+                                        Image(
+                                            bitmap,
+                                            null,
+                                            Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .size(64.dp)
+                                        )
+                                    }
+
+
+                                    Column {
+                                        Text(selectedMusicItem?.label ?: "")
+                                        Text(selectedMusicItem?.testTarget ?: "")
+                                    }
+
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Box(
+                                        Modifier
+                                            .clip(CircleShape)
+                                            .background(Color.White.copy(0.2f))
+                                            .clickable {
+                                                playerViewModel.onOpenSongSelection()
+                                            }
+                                            .padding(6.dp)) {
+                                        Icon(
+                                            Icons.Rounded.Menu,
+                                            null,
+                                            tint = Color.White,
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            uiState.lyrics?.let { lyrics ->
+                                KaraokeLyricsView(
+                                    listState = listState,
+                                    lyrics = lyrics,
+                                    currentPosition = animatedPosition,
+                                    onLineClicked = { line ->
+                                        playerViewModel.seekTo(line.start.toLong())
                                     },
-                            )
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp)
+                                        .graphicsLayer {
+                                            compositingStrategy = CompositingStrategy.Offscreen
+                                        },
+                                )
+                            }
                         }
 
                         if (uiState.showSelectionDialog) {
                             MusicItemSelectionDialog(
                                 items = testItems,
-                                onItemSelected = { selectedItem ->
+                                onItemSelected = { item ->
                                     playerViewModel.onSongSelected()
-                                    playerViewModel.setMediaItemAndPlay(selectedItem)
+                                    playerViewModel.setMediaItemAndPlay(item)
+                                    selectedMusicItem = item
                                 },
                                 onDismissRequest = {
                                     // 如果用户取消了对话框，也可以通知ViewModel
                                     // playerViewModel.onDialogDismissed()
-                                }
-                            )
+                                })
                         }
                     }
                 }
@@ -188,8 +250,7 @@ fun MusicItemSelectionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { selectedIndex = index }
-                            .padding(vertical = 12.dp)
-                    ) {
+                            .padding(vertical = 12.dp)) {
                         Text(item.label, fontWeight = FontWeight.Bold)
                         Text(item.testTarget, fontSize = 14.sp)
                     }
@@ -203,8 +264,7 @@ fun MusicItemSelectionDialog(
                     onItemSelected(items[selectedIndex])
                 }
             })
-        }
-    )
+        })
 }
 
 fun Color.toImageBitmap(width: Int = 1, height: Int = 1): ImageBitmap {

@@ -68,6 +68,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var cachedArtworkBitmap: ImageBitmap? = null
 
     private val assets: android.content.res.AssetManager = application.assets
+    private val autoParser = AutoParser.Builder().build()
 
     init {
         val sessionToken =
@@ -139,17 +140,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // ✨ 6. 新增：加载歌词的公共函数
     fun loadLyricsFor(item: MusicItem) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val lyricsData = assets.open(item.lyrics).bufferedReader().use { it.readLines() }
-                val lyricsRaw = AutoParser.parse(lyricsData)
+                val lyricsRaw = autoParser.parse(lyricsData)
 
                 val finalLyrics = if (item.translation != null) {
                     val translationData =
                         assets.open(item.translation).bufferedReader().use { it.readLines() }
-                    val translationRaw = AutoParser.parse(translationData)
+                    val translationRaw = autoParser.parse(translationData)
                     val translationMap =
                         translationRaw.lines.associateBy { (it as SyncedLine).start }
                     SyncedLyrics(
@@ -189,6 +189,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun onSongSelected() {
         _uiState.value = _uiState.value.copy(showSelectionDialog = false)
+    }
+
+    fun onOpenSongSelection() {
+        controller?.clearMediaItems()
+        controller?.stop()
+        _uiState.value = _uiState.value.copy(showSelectionDialog = true)
     }
 
     fun setMediaItemAndPlay(item: MusicItem) {
