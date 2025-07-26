@@ -247,11 +247,15 @@ fun KaraokeLyricsView(
                         (currentPosition in 0 until line.start)
             }
 
-            // 只要满足上述任一条件，就显示呼吸点
-            AnimatedVisibility(visible = showDotInPause || showDotInIntro) {
-                Text("Breathing dot")
+                if (showDotInPause) {
+                    KaraokeBreathingDots(
+                        alignment = (nextLine as? KaraokeLine)?.alignment ?: KaraokeAlignment.Start,
+                        startTimeMs = line.end,
+                        endTimeMs = nextLine!!.start,
+                        currentTimeMs = currentTimeMs
+                    )
+                }
             }
-        }
 
         item("BottomSpacing") {
             Spacer(
