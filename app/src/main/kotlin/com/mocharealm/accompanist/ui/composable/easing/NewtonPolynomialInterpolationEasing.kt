@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Easing
 
 class NewtonPolynomialInterpolationEasing(points: List<Pair<Double, Double>>): Easing {
 
+    // 辅助构造函数，允许使用 vararg 形式传入数据点
     constructor(vararg points: Pair<Double, Double>) : this(points.toList())
 
     private val dividedDifferences: List<Double>
@@ -17,34 +18,47 @@ class NewtonPolynomialInterpolationEasing(points: List<Pair<Double, Double>>): E
 
         val n = points.size
         xValues = points.map { it.first }
-        val yValues = points.map { it.second }.toMutableList()
 
-        // 计算差商表
-        val coeffs = mutableListOf<Double>()
+        // --- 核心修正 ---
+        // 使用一个二维数组来存储差商表，避免就地修改导致的错误
+        val table = Array(n) { DoubleArray(n) }
+
+        // 第一列是 y 值
         for (i in 0 until n) {
-            coeffs.add(yValues[i])
-            for (j in (i + 1) until n) {
-                yValues[j] = (yValues[j] - yValues[j - 1]) / (xValues[j] - xValues[j - i - 1])
+            table[i][0] = points[i].second
+        }
+
+        // 计算差商表的其余部分
+        for (j in 1 until n) {
+            for (i in j until n) {
+                table[i][j] = (table[i][j - 1] - table[i - 1][j - 1]) / (xValues[i] - xValues[i - j])
             }
         }
-        dividedDifferences = coeffs
+
+        // 最终的系数是差商表的对角线
+        dividedDifferences = List(n) { i -> table[i][i] }
     }
 
+    /**
+     * Easing 接口的核心方法，将输入的线性进度 (fraction) 转换为缓动后的进度。
+     */
     override fun transform(fraction: Float): Float {
+        val x = fraction.toDouble()
         val n = xValues.size - 1
         var result = dividedDifferences[n]
+
+        // 使用霍纳法则进行高效计算
         for (i in (n - 1) downTo 0) {
-            result = result * (fraction - xValues[i]) + dividedDifferences[i]
+            result = result * (x - xValues[i]) + dividedDifferences[i]
         }
         return result.toFloat()
     }
 }
 
 val DipAndRise = NewtonPolynomialInterpolationEasing(
-    0.0 to 0.0,      // (输入=0，输出=0)
-    0.5 to -0.5,    // (输入=0.5，输出=-0.25)
-    1.0 to 1.0       // (输入=1.0，输出=1.0)
-
+    0.0 to 0.0,
+    0.5 to -0.5,
+    1.0 to 1.0
 )
 
 val Swell = NewtonPolynomialInterpolationEasing(
