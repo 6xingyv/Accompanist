@@ -128,8 +128,8 @@ private fun createLineGradientBrush(
     lineLayout: List<SyllableLayout>,
     currentTimeMs: Int,
 ): Brush {
-    val activeColor = Color.White.copy(0f)
-    val inactiveColor = Color.White.copy(0.6f)
+    val activeColor = Color.White.copy(alpha = 0f)
+    val inactiveColor = Color.White.copy(alpha = 0.6f)
     val minFadeWidth = 30f
 
     if (lineLayout.isEmpty()) {
@@ -138,45 +138,56 @@ private fun createLineGradientBrush(
 
     val totalWidth = lineLayout.last().let { it.position.x + it.size.width }
 
-    if (totalWidth <= 0f) {
-        val isFinished = currentTimeMs >= (lineLayout.lastOrNull()?.syllable?.end ?: 0)
+    val firstSyllableStart = lineLayout.first().syllable.start
+    val lastSyllableEnd = lineLayout.last().syllable.end
+    val lineDuration = (lastSyllableEnd - firstSyllableStart).toFloat()
+
+    if (totalWidth <= 0f || lineDuration <= 0f) {
+        val isFinished = currentTimeMs >= lastSyllableEnd
         val color = if (isFinished) activeColor else inactiveColor
         return Brush.horizontalGradient(colors = listOf(color, color))
     }
 
-    // Calculate the overall line progress from 0.0f to 1.0f.
-    val lineProgress = run {
-        val activeSyllable = lineLayout.find {
-            currentTimeMs in it.syllable.start until it.syllable.end
-        }
+    // --- Time Remapping ---
+    // Define the three phases based on the total line duration
+    val fadeInEndTime = firstSyllableStart + lineDuration * 0.15f
+    val fadeOutStartTime = firstSyllableStart + lineDuration * 0.85f
 
-        val currentPixelPosition = when {
-            // Case A: Inside an active syllable.
-            activeSyllable != null -> {
-                val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)
-                activeSyllable.position.x + activeSyllable.size.width * syllableProgress
-            }
-            // Case B: After the entire line has finished.
-            currentTimeMs >= lineLayout.last().syllable.end -> {
-                totalWidth
-            }
-            // Case C: In a pause between syllables or before the line starts.
-            else -> {
-                val lastFinished = lineLayout.lastOrNull { currentTimeMs >= it.syllable.end }
-                lastFinished?.let { it.position.x + it.size.width } ?: 0f
-            }
+    val baseFadeWidthPx = maxOf(totalWidth * 0.2f, minFadeWidth)
+    val baseFadeRange = (baseFadeWidthPx / totalWidth).coerceAtMost(1f)
+
+    var lineProgress = 0f
+    var fadeRange = 0f
+
+    when {
+        // Phase 1: Fade-in
+        currentTimeMs < fadeInEndTime -> {
+            val phaseProgress = (currentTimeMs - firstSyllableStart) / (lineDuration * 0.15f)
+            fadeRange = baseFadeRange * phaseProgress.coerceIn(0f, 1f)
+            lineProgress = 0f
         }
-        (currentPixelPosition / totalWidth).coerceIn(0f, 1f)
+        // Phase 3: Fade-out
+        currentTimeMs > fadeOutStartTime -> {
+            val phaseProgress = (currentTimeMs - fadeOutStartTime) / (lineDuration * 0.15f)
+            fadeRange = baseFadeRange * (1f - phaseProgress.coerceIn(0f, 1f))
+            lineProgress = 1f
+        }
+        // Phase 2: Main translation
+        else -> {
+            fadeRange = baseFadeRange
+            // Remap the time in this phase to a 0-1 progress
+            val phaseDuration = fadeOutStartTime - fadeInEndTime
+            val timeInPhase = currentTimeMs - fadeInEndTime
+            lineProgress = (timeInPhase / phaseDuration).coerceIn(0f, 1f)
+        }
     }
 
-    val fadeRange = run {
-        val fadeWidthPx = maxOf(totalWidth * 0.2f, minFadeWidth)
-        (fadeWidthPx / totalWidth).coerceAtMost(1f)
-    }
-
-    return when (lineProgress) {
-        0f -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
-        1f -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
+    return when {
+        // Line is completely finished
+        currentTimeMs >= lastSyllableEnd -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
+        // Line has not started yet
+        currentTimeMs < firstSyllableStart -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
+        // During the animation
         else -> Brush.horizontalGradient(
             colorStops = arrayOf(
                 0.0f to activeColor,
@@ -278,7 +289,8 @@ private fun DrawScope.drawLine(
                         )
                     }
                 }
-            } else { val floatOffset = 6f * EasingOutCubic.transform(1f - progress)
+            } else {
+                val floatOffset = 6f * EasingOutCubic.transform(1f - progress)
                 val finalPosition =
                     syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
                 drawText(

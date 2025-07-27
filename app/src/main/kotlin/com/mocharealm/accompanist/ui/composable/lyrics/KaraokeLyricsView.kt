@@ -64,61 +64,25 @@ fun KaraokeLyricsView(
 ) {
     val currentTimeMs by rememberUpdatedState(currentPosition.toInt())
 
+    val rawIndex = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
+
     val focusedLineIndex = run {
-        val lines = lyrics.lines
-        if (lines.isEmpty()) {
-            return@run 0 // 如果歌词列表为空，则直接返回0
-        }
-
-        // 步骤1: 使用二分查找来定位当前播放时间所在的行，或刚播放完的行
-        var low = 0
-        var high = lines.size - 1
-        var searchResultIndex = 0
-
-        while (low <= high) {
-            val mid = low + (high - low) / 2 // 使用这种方式防止整数溢出
-            val line = lines[mid]
-
-            when {
-                currentTimeMs < line.start -> high = mid - 1 // 时间在当前行的前面，在左半部分继续查找
-                currentTimeMs > line.end -> low = mid + 1   // 时间在当前行的后面，在右半部分继续查找
-                else -> {
-                    // 时间正好在当前行范围内，找到了匹配项
-                    searchResultIndex = mid
+        // 检查找到的行是否是伴奏
+        val line = lyrics.lines.getOrNull(rawIndex) as? KaraokeLine
+        if (line != null && line.isAccompaniment) {
+            // 如果是伴奏，执行你的回溯策略
+            var newIndex = rawIndex
+            for (i in rawIndex downTo 0) {
+                if (!(lyrics.lines[i] as KaraokeLine).isAccompaniment) {
+                    newIndex = i
                     break
                 }
             }
+            newIndex
+        } else {
+            // 如果不是伴奏，直接使用库返回的结果
+            rawIndex
         }
-
-        // 如果循环结束时没有找到精确匹配（即时间在两行歌词的间隙中）
-        // high 会指向刚刚播放完的行，low 会指向下一行
-        if (low > high) {
-            searchResultIndex = high.coerceAtLeast(0) // 将索引确定为刚播放完的那一行
-        }
-
-        // 步骤2: 根据你的要求，如果找到的行是伴奏，则向前查找第一个非伴奏行
-
-        if (lines.all { it is KaraokeLine }) {
-            val line = lines[searchResultIndex] as KaraokeLine
-            if (line.isAccompaniment) {
-                var finalIndex = searchResultIndex
-                // 从当前索引向前（索引减小）遍历
-                for (i in searchResultIndex downTo 0) {
-                    if (!(lines[i] as KaraokeLine).isAccompaniment) {
-                        finalIndex = i // 找到了第一个非伴奏行
-                        break       // 停止查找
-                    }
-                    // 如果一直找到索引0仍然是伴奏行，finalIndex最终会是0
-                    if (i == 0) {
-                        finalIndex = 0
-                    }
-                }
-                return@run finalIndex
-            } else {
-                // 如果不是伴奏行或索引无效，直接返回查找到的索引
-                return@run searchResultIndex
-            }
-        } else searchResultIndex
     }
 
     val isDuoView by remember {
