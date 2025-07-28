@@ -29,8 +29,7 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Session" }
-androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
-accompanist-lyrics = { module = "com.mocharealm.accompanist:accompanist-lyrics", version = "0.1.5" }
+accompanist-lyrics = { module = "com.mocharealm.accompanist:accompanist-lyrics", version = "0.2.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

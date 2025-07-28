@@ -64,15 +64,15 @@ fun KaraokeLyricsView(
 ) {
     val currentTimeMs by rememberUpdatedState(currentPosition.toInt())
 
-    val rawIndex = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
+    val rawFirstFocusedLineIndex = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
 
-    val focusedLineIndex = run {
+    val finalFirstFocusedLineIndex = run {
         // 检查找到的行是否是伴奏
-        val line = lyrics.lines.getOrNull(rawIndex) as? KaraokeLine
+        val line = lyrics.lines.getOrNull(rawFirstFocusedLineIndex) as? KaraokeLine
         if (line != null && line.isAccompaniment) {
             // 如果是伴奏，执行你的回溯策略
-            var newIndex = rawIndex
-            for (i in rawIndex downTo 0) {
+            var newIndex = rawFirstFocusedLineIndex
+            for (i in rawFirstFocusedLineIndex downTo 0) {
                 if (!(lyrics.lines[i] as KaraokeLine).isAccompaniment) {
                     newIndex = i
                     break
@@ -81,7 +81,7 @@ fun KaraokeLyricsView(
             newIndex
         } else {
             // 如果不是伴奏，直接使用库返回的结果
-            rawIndex
+            rawFirstFocusedLineIndex
         }
     }
 
@@ -114,20 +114,20 @@ fun KaraokeLyricsView(
         LocalConfiguration.current.screenHeightDp.dp.toPx()
     } * 0.1f
 
-    LaunchedEffect(focusedLineIndex) {
-        if (focusedLineIndex >= 0 &&
-            focusedLineIndex < lyrics.lines.size &&
+    LaunchedEffect(finalFirstFocusedLineIndex) {
+        if (finalFirstFocusedLineIndex >= 0 &&
+            finalFirstFocusedLineIndex < lyrics.lines.size &&
             !listState.isScrollInProgress
         ) {
             val items = listState.layoutInfo.visibleItemsInfo
-            val targetItem = items.firstOrNull { it.index == focusedLineIndex }
+            val targetItem = items.firstOrNull { it.index == finalFirstFocusedLineIndex }
             val scrollOffset =
                 (targetItem?.offset?.minus(listState.layoutInfo.viewportStartOffset + baseScrollOffset))?.toFloat()
             try {
                 if (scrollOffset != null) {
                     listState.animateScrollBy(scrollOffset, tween(600))
                 } else {
-                    listState.animateScrollToItem(focusedLineIndex)
+                    listState.animateScrollToItem(finalFirstFocusedLineIndex)
                 }
             } catch (_: Exception) {
             }
@@ -165,7 +165,7 @@ fun KaraokeLyricsView(
             contentPadding = PaddingValues(vertical = 300.dp)
         ) {
             item(key = "intro-dots") {
-                // Call KaraokeBreathingDots directly if visible
+
                 if (showDotInIntro) {
                     KaraokeBreathingDots(
                         alignment = (firstLine as? KaraokeLine)?.alignment
@@ -184,7 +184,9 @@ fun KaraokeLyricsView(
                 when (line) {
                     is KaraokeLine -> {
                         // Check if the line is the current focus line
-                        val isCurrentFocusLine by rememberUpdatedState(line.isFocused(currentTimeMs))
+                        val index = if (showDotInIntro) index + 1 else index
+                        val allFocusedLineIndex by rememberUpdatedState(lyrics.getCurrentAllHighlightLineIndicesByTime(currentTimeMs))
+                        val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
                         val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
 
                         val lineTimeMs =
