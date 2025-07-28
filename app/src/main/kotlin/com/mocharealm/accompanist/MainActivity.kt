@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,6 +66,7 @@ import com.mocharealm.accompanist.ui.composable.background.BackgroundVisualState
 import com.mocharealm.accompanist.ui.composable.background.FlowingLightBackground
 import com.mocharealm.accompanist.ui.composable.lyrics.KaraokeLyricsView
 import com.mocharealm.accompanist.ui.theme.AccompanistTheme
+import com.mocharealm.accompanist.ui.theme.SFPro
 import kotlinx.coroutines.android.awaitFrame
 
 class MainActivity : ComponentActivity() {
@@ -152,7 +156,8 @@ class MainActivity : ComponentActivity() {
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .statusBarsPadding()
-                                    .padding(vertical = 16.dp, horizontal = 24.dp)
+                                    .padding(horizontal = 28.dp)
+                                    .padding(top = 28.dp)
                                     .fillMaxWidth()
                             ) {
                                 Row(
@@ -164,15 +169,30 @@ class MainActivity : ComponentActivity() {
                                             bitmap,
                                             null,
                                             Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .size(64.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .border(
+                                                    1.dp,
+                                                    Color.White.copy(0.2f),
+                                                    RoundedCornerShape(6.dp)
+                                                )
+                                                .size(60.dp)
                                         )
                                     }
 
 
                                     Column {
-                                        Text(selectedMusicItem?.label ?: "")
-                                        Text(selectedMusicItem?.testTarget ?: "")
+                                        Text(
+                                            selectedMusicItem?.label ?: "",
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = SFPro,
+                                            lineHeight = 1.em
+                                        )
+                                        Text(
+                                            selectedMusicItem?.testTarget ?: "",
+                                            Modifier.alpha(0.6f),
+                                            fontFamily = SFPro,
+                                            lineHeight = 1.em
+                                        )
                                     }
 
                                 }
@@ -184,14 +204,14 @@ class MainActivity : ComponentActivity() {
                                             .clickable {
                                                 playerViewModel.onOpenSongSelection()
                                             }
-                                            .padding(6.dp)) {
+                                            .padding(4.dp)) {
                                         Icon(
                                             Icons.Rounded.Menu,
                                             null,
                                             tint = Color.White,
                                             modifier = Modifier
                                                 .align(Alignment.Center)
-                                                .size(24.dp)
+                                                .size(20.dp)
                                         )
                                     }
                                 }
