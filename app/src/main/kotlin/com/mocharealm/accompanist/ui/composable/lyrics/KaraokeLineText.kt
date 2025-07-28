@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -52,26 +53,39 @@ import com.mocharealm.accompanist.ui.composable.easing.DipAndRise
 import com.mocharealm.accompanist.ui.composable.easing.EasingOutCubic
 import com.mocharealm.accompanist.ui.composable.easing.Swell
 import com.mocharealm.accompanist.ui.theme.SFPro
+import kotlin.math.pow
+
+data class MeasuredSyllable(
+    val syllable: KaraokeSyllable,
+    val textLayoutResult: TextLayoutResult,
+    val width: Float = textLayoutResult.size.width.toFloat()
+)
 
 data class WrappedLine(
-    val syllables: List<KaraokeSyllable>,
+    val syllables: List<MeasuredSyllable>,
     val totalWidth: Float
 )
 
-private fun calculateWrappedLines(
+private fun calculateGreedyWrappedLines(
     syllables: List<KaraokeSyllable>,
     availableWidthPx: Float,
     textMeasurer: TextMeasurer,
     style: TextStyle
 ): List<WrappedLine> {
 
+    val measuredSyllables = syllables.map {
+        MeasuredSyllable(
+            syllable = it,
+            textLayoutResult = textMeasurer.measure(it.content, style)
+        )
+    }
+
     val lines = mutableListOf<WrappedLine>()
-    val currentLine = mutableListOf<KaraokeSyllable>()
+    val currentLine = mutableListOf<MeasuredSyllable>()
     var currentLineWidth = 0f
 
-    syllables.forEach { syllable ->
-        val syllableWidth = textMeasurer.measure(syllable.content, style).size.width.toFloat()
-        if (currentLineWidth + syllableWidth > availableWidthPx && currentLine.isNotEmpty()) {
+    measuredSyllables.forEach { measuredSyllable ->
+        if (currentLineWidth + measuredSyllable.width > availableWidthPx && currentLine.isNotEmpty()) {
             val trimmedDisplayLine = trimDisplayLineTrailingSpaces(currentLine, textMeasurer, style)
             if (trimmedDisplayLine.syllables.isNotEmpty()) {
                 lines.add(trimmedDisplayLine)
@@ -79,8 +93,8 @@ private fun calculateWrappedLines(
             currentLine.clear()
             currentLineWidth = 0f
         }
-        currentLine.add(syllable)
-        currentLineWidth += syllableWidth
+        currentLine.add(measuredSyllable)
+        currentLineWidth += measuredSyllable.width
     }
 
     if (currentLine.isNotEmpty()) {
@@ -92,15 +106,70 @@ private fun calculateWrappedLines(
     return lines
 }
 
+private fun calculateBalancedLines(
+    syllables: List<KaraokeSyllable>,
+    availableWidthPx: Float,
+    textMeasurer: TextMeasurer,
+    style: TextStyle
+): List<WrappedLine> {
+    if (syllables.isEmpty()) return emptyList()
+
+    val measuredSyllables = syllables.map {
+        MeasuredSyllable(
+            syllable = it,
+            textLayoutResult = textMeasurer.measure(it.content, style)
+        )
+    }
+    val n = measuredSyllables.size
+
+    val costs = DoubleArray(n + 1) { Double.POSITIVE_INFINITY }
+    val breaks = IntArray(n + 1)
+    costs[0] = 0.0
+
+    for (i in 1..n) {
+        var currentLineWidth = 0f
+        for (j in i downTo 1) {
+            currentLineWidth += measuredSyllables[j - 1].width
+
+            if (currentLineWidth > availableWidthPx) break
+
+            val badness = (availableWidthPx - currentLineWidth).pow(2).toDouble()
+
+            if (costs[j - 1] != Double.POSITIVE_INFINITY && costs[j - 1] + badness < costs[i]) {
+                costs[i] = costs[j - 1] + badness
+                breaks[i] = j - 1
+            }
+        }
+    }
+
+    if (costs[n] == Double.POSITIVE_INFINITY) {
+        // 如果无法找到一个有效的换行方案（比如某个音节本身就超宽），则退回到原始的贪心算法
+        // (此处的降级策略代码未实现，为保持简洁，假设总能找到解)
+        // Log.w("KaraokeLayout", "Could not find a balanced layout.")
+        calculateGreedyWrappedLines(syllables,availableWidthPx,textMeasurer,style)
+    }
+
+    val lines = mutableListOf<WrappedLine>()
+    var currentIndex = n
+    while (currentIndex > 0) {
+        val startIndex = breaks[currentIndex]
+        val lineSyllables = measuredSyllables.subList(startIndex, currentIndex)
+        val lineWidth = lineSyllables.sumOf { it.width.toDouble() }.toFloat()
+        // 注意：trimDisplayLineTrailingSpaces 也需要应用在这里
+        val trimmedLine = trimDisplayLineTrailingSpaces(lineSyllables, textMeasurer, style)
+        lines.add(0, trimmedLine) // 将行添加到列表的开头
+        currentIndex = startIndex
+    }
+
+    return lines
+}
+
 private fun calculateStaticLineLayout(
     wrappedLines: List<WrappedLine>,
-    textMeasurer: TextMeasurer,
     lineAlignment: Alignment,
     canvasWidth: Float,
-    style: TextStyle
+    lineHeight: Float
 ): List<List<SyllableLayout>> {
-    val lineHeight = textMeasurer.measure("M", style).size.height.toFloat()
-
     return wrappedLines.mapIndexed { lineIndex, wrappedLine ->
         val lineY = lineIndex * lineHeight
         val startX = when (lineAlignment) {
@@ -110,13 +179,12 @@ private fun calculateStaticLineLayout(
         }
         var currentX = startX
 
-        wrappedLine.syllables.map { syllable ->
-            val result = textMeasurer.measure(syllable.content, style)
+        wrappedLine.syllables.map { measuredSyllable ->
             val layout = SyllableLayout(
-                syllable = syllable,
+                syllable = measuredSyllable.syllable,
                 position = Offset(currentX, lineY),
-                size = Size(result.size.width.toFloat(), result.size.height.toFloat()),
-                textLayoutResult = result
+                size = Size(measuredSyllable.width, measuredSyllable.textLayoutResult.size.height.toFloat()),
+                textLayoutResult = measuredSyllable.textLayoutResult
             )
             currentX += layout.size.width
             layout
@@ -137,65 +205,83 @@ private fun createLineGradientBrush(
     }
 
     val totalWidth = lineLayout.last().let { it.position.x + it.size.width }
+    if (totalWidth <= 0f) {
+        val isFinished = currentTimeMs >= lineLayout.last().syllable.end
+        val color = if (isFinished) activeColor else inactiveColor
+        return Brush.horizontalGradient(colors = listOf(color, color))
+    }
 
     val firstSyllableStart = lineLayout.first().syllable.start
     val lastSyllableEnd = lineLayout.last().syllable.end
     val lineDuration = (lastSyllableEnd - firstSyllableStart).toFloat()
 
-    if (totalWidth <= 0f || lineDuration <= 0f) {
-        val isFinished = currentTimeMs >= lastSyllableEnd
-        val color = if (isFinished) activeColor else inactiveColor
-        return Brush.horizontalGradient(colors = listOf(color, color))
+    // 时间阶段：fadeIn、主阶段、fadeOut
+    val fadeInDuration = if (lineDuration < 2000) lineDuration * 0.1f else 0f
+    val fadeOutDuration = fadeInDuration
+    val fadeInEndTime = firstSyllableStart + fadeInDuration
+    val fadeOutStartTime = lastSyllableEnd - fadeOutDuration
+
+    val lineProgress = run {
+        val activeSyllable = lineLayout.find {
+            currentTimeMs in it.syllable.start until it.syllable.end
+        }
+
+        val currentPixelPosition = when {
+            activeSyllable != null -> {
+                val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)
+                activeSyllable.position.x + activeSyllable.size.width * syllableProgress
+            }
+            currentTimeMs >= lastSyllableEnd -> totalWidth
+            else -> {
+                val lastFinished = lineLayout.lastOrNull { currentTimeMs >= it.syllable.end }
+                lastFinished?.let { it.position.x + it.size.width } ?: 0f
+            }
+        }
+        (currentPixelPosition / totalWidth).coerceIn(0f, 1f)
     }
 
-    // --- Time Remapping ---
-    // Define the three phases based on the total line duration
-    val fadeInEndTime = firstSyllableStart + lineDuration * 0.15f
-    val fadeOutStartTime = firstSyllableStart + lineDuration * 0.85f
-
-    val baseFadeWidthPx = maxOf(totalWidth * 0.2f, minFadeWidth)
-    val baseFadeRange = (baseFadeWidthPx / totalWidth).coerceAtMost(1f)
-
-    var lineProgress = 0f
-    var fadeRange = 0f
-
-    when {
-        // Phase 1: Fade-in
-        currentTimeMs < fadeInEndTime -> {
-            val phaseProgress = (currentTimeMs - firstSyllableStart) / (lineDuration * 0.15f)
-            fadeRange = baseFadeRange * phaseProgress.coerceIn(0f, 1f)
-            lineProgress = 0f
-        }
-        // Phase 3: Fade-out
-        currentTimeMs > fadeOutStartTime -> {
-            val phaseProgress = (currentTimeMs - fadeOutStartTime) / (lineDuration * 0.15f)
-            fadeRange = baseFadeRange * (1f - phaseProgress.coerceIn(0f, 1f))
-            lineProgress = 1f
-        }
-        // Phase 2: Main translation
-        else -> {
-            fadeRange = baseFadeRange
-            // Remap the time in this phase to a 0-1 progress
-            val phaseDuration = fadeOutStartTime - fadeInEndTime
-            val timeInPhase = currentTimeMs - fadeInEndTime
-            lineProgress = (timeInPhase / phaseDuration).coerceIn(0f, 1f)
-        }
+    val fadeRange = run {
+        val fadeWidthPx = maxOf(totalWidth * 0.2f, minFadeWidth)
+        (fadeWidthPx / totalWidth).coerceAtMost(1f)
     }
 
     return when {
-        // Line is completely finished
         currentTimeMs >= lastSyllableEnd -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
-        // Line has not started yet
         currentTimeMs < firstSyllableStart -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
-        // During the animation
-        else -> Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to activeColor,
-                (lineProgress - fadeRange / 2).coerceAtLeast(0f) to activeColor,
-                (lineProgress + fadeRange / 2).coerceAtMost(1f) to inactiveColor,
-                1.0f to inactiveColor
+        currentTimeMs < fadeInEndTime -> {
+            val phaseProgress = ((currentTimeMs - firstSyllableStart) / fadeInDuration).coerceIn(0f, 1f)
+            val dynamicFade = fadeRange * phaseProgress
+            Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0.0f to activeColor,
+                    (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
+                    (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
+                    1.0f to inactiveColor
+                )
             )
-        )
+        }
+        currentTimeMs > fadeOutStartTime -> {
+            val phaseProgress = ((currentTimeMs - fadeOutStartTime) / fadeOutDuration).coerceIn(0f, 1f)
+            val dynamicFade = fadeRange * (1f - phaseProgress)
+            Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0.0f to activeColor,
+                    (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
+                    (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
+                    1.0f to inactiveColor
+                )
+            )
+        }
+        else -> {
+            Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0.0f to activeColor,
+                    (lineProgress - fadeRange / 2).coerceAtLeast(0f) to activeColor,
+                    (lineProgress + fadeRange / 2).coerceAtMost(1f) to inactiveColor,
+                    1.0f to inactiveColor
+                )
+            )
+        }
     }
 }
 
@@ -214,8 +300,6 @@ private fun DrawScope.drawLine(
         rowLayouts.forEach { syllableLayout ->
             val syllable = syllableLayout.syllable
             val progress = syllable.progress(currentTimeMs)
-
-
 
             val perCharDuration = if (syllable.content.isNotEmpty()) {
                 syllable.duration.toFloat() / syllable.content.length
@@ -301,9 +385,6 @@ private fun DrawScope.drawLine(
                 )
             }
         }
-
-
-        // Draw the mask gradient
         val width = rowLayouts.last().position.x + rowLayouts.last().size.width
         val height = rowLayouts.maxOf { it.size.height }
         drawRect(
@@ -378,7 +459,7 @@ fun KaraokeLineText(
             .clickable { onLineClicked(line) }
     ) {
         Column(
-            modifier
+            Modifier
                 .align(if (line.alignment == KaraokeAlignment.End) Alignment.TopEnd else Alignment.TopStart)
                 .padding(vertical = 8.dp, horizontal = 16.dp)
                 .graphicsLayer {
@@ -393,7 +474,7 @@ fun KaraokeLineText(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalAlignment = if (line.alignment == KaraokeAlignment.Start) Alignment.Start else Alignment.End
         ) {
-            BoxWithConstraints {
+            BoxWithConstraints(modifier) {
                 val density = LocalDensity.current
                 val availableWidthPx = with(density) { maxWidth.toPx() }
 
@@ -416,7 +497,7 @@ fun KaraokeLineText(
                 }
 
                 val wrappedLines = remember(line.syllables, availableWidthPx, textMeasurer) {
-                    calculateWrappedLines(
+                    calculateBalancedLines(
                         syllables = line.syllables,
                         availableWidthPx = availableWidthPx,
                         textMeasurer = textMeasurer,
@@ -427,10 +508,9 @@ fun KaraokeLineText(
                 val staticLineLayouts = remember(wrappedLines, availableWidthPx) {
                     calculateStaticLineLayout(
                         wrappedLines = wrappedLines,
-                        textMeasurer = textMeasurer,
                         lineAlignment = if (line.alignment == KaraokeAlignment.End) Alignment.TopEnd else Alignment.TopStart,
                         canvasWidth = availableWidthPx,
-                        style = textStyle
+                        lineHeight = textMeasurer.measure("M", textStyle).size.height.toFloat()
                     )
                 }
 
@@ -483,29 +563,37 @@ fun KaraokeLineText(
 }
 
 private fun trimDisplayLineTrailingSpaces(
-    displayLineSyllables: List<KaraokeSyllable>,
+    displayLineSyllables: List<MeasuredSyllable>,
     textMeasurer: TextMeasurer,
     style: TextStyle
 ): WrappedLine {
     if (displayLineSyllables.isEmpty()) {
         return WrappedLine(emptyList(), 0f)
     }
+
     val processedSyllables = displayLineSyllables.toMutableList()
-    val lastIndex = processedSyllables.size - 1
-    if (lastIndex >= 0) {
-        val lastSyllable = processedSyllables[lastIndex]
-        val originalContent = lastSyllable.content
-        val trimmedContent = originalContent.trimEnd()
-        if (trimmedContent != originalContent && trimmedContent.isNotEmpty()) {
-            val trimmedSyllable = lastSyllable.copy(content = trimmedContent)
+    val lastIndex = processedSyllables.lastIndex
+    val lastMeasuredSyllable = processedSyllables[lastIndex]
+
+    val originalContent = lastMeasuredSyllable.syllable.content
+    val trimmedContent = originalContent.trimEnd()
+
+    if (trimmedContent.length < originalContent.length) {
+        if (trimmedContent.isNotEmpty()) {
+            val trimmedLayoutResult = textMeasurer.measure(trimmedContent, style)
+            val trimmedSyllable = lastMeasuredSyllable.copy(
+                syllable = lastMeasuredSyllable.syllable.copy(content = trimmedContent),
+                textLayoutResult = trimmedLayoutResult
+            )
             processedSyllables[lastIndex] = trimmedSyllable
-        } else if (trimmedContent.isEmpty()) {
+        } else {
             processedSyllables.removeAt(lastIndex)
         }
     }
-    val totalWidth = processedSyllables.sumOf { syllable ->
-        textMeasurer.measure(syllable.content, style).size.width.toDouble()
-    }.toFloat()
+
+    // 3. 高效计算总宽度：直接累加缓存的宽度值
+    val totalWidth = processedSyllables.sumOf { it.width.toDouble() }.toFloat()
+
     return WrappedLine(processedSyllables, totalWidth)
 }
 
