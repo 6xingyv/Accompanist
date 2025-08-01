@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -60,6 +59,7 @@ fun KaraokeLyricsView(
     lyrics: SyncedLyrics,
     currentPosition: Long,
     onLineClicked: (ISyncedLine) -> Unit,
+    onLinePressed: (ISyncedLine) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currentTimeMs by rememberUpdatedState(currentPosition.toInt())
@@ -143,23 +143,17 @@ fun KaraokeLyricsView(
             modifier = modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    val graphicsLayer = obtainGraphicsLayer()
-                    graphicsLayer.apply {
-                        record {
-                            drawContent()
-                            drawRect(
-                                Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    0.1f to Color.White,
-                                    0.5f to Color.White,
-                                    1f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                    }
                     onDrawWithContent {
-                        drawLayer(graphicsLayer)
+                        drawContent()
+                        drawRect(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.1f to Color.White,
+                                0.5f to Color.White,
+                                1f to Color.Transparent
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
                     }
                 },
             contentPadding = PaddingValues(vertical = 300.dp)
@@ -185,7 +179,11 @@ fun KaraokeLyricsView(
                     is KaraokeLine -> {
                         // Check if the line is the current focus line
                         val index = if (showDotInIntro) index + 1 else index
-                        val allFocusedLineIndex by rememberUpdatedState(lyrics.getCurrentAllHighlightLineIndicesByTime(currentTimeMs))
+                        val allFocusedLineIndex by rememberUpdatedState(
+                            lyrics.getCurrentAllHighlightLineIndicesByTime(
+                                currentTimeMs
+                            )
+                        )
                         val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
                         val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
 
@@ -196,6 +194,7 @@ fun KaraokeLyricsView(
                             KaraokeLineText(
                                 line = line,
                                 onLineClicked = onLineClicked,
+                                onLinePressed = onLinePressed,
                                 currentTimeMs = lineTimeMs,
                                 modifier = Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                             )
@@ -226,6 +225,7 @@ fun KaraokeLyricsView(
                                 KaraokeLineText(
                                     line = line,
                                     onLineClicked = onLineClicked,
+                                    onLinePressed = onLinePressed,
                                     currentTimeMs = lineTimeMs,
                                     Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                                 )
@@ -267,8 +267,7 @@ fun KaraokeLyricsView(
                             (nextLine.start - line.end > 5000) &&
                             (currentTimeMs in line.end..nextLine.start)
                 }
-
-                if (showDotInPause) {
+                AnimatedVisibility(showDotInPause) {
                     KaraokeBreathingDots(
                         alignment = (nextLine as? KaraokeLine)?.alignment ?: KaraokeAlignment.Start,
                         startTimeMs = line.end,

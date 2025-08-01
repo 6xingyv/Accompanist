@@ -1,9 +1,12 @@
 package com.mocharealm.accompanist.ui.composable.lyrics
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -48,10 +52,11 @@ import com.mocharealm.accompanist.lyrics.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
-import com.mocharealm.accompanist.ui.composable.easing.Bounce
-import com.mocharealm.accompanist.ui.composable.easing.DipAndRise
-import com.mocharealm.accompanist.ui.composable.easing.EasingOutCubic
-import com.mocharealm.accompanist.ui.composable.easing.Swell
+import com.mocharealm.accompanist.ui.composable.utils.easedHorizontalGradient
+import com.mocharealm.accompanist.ui.composable.utils.easing.Bounce
+import com.mocharealm.accompanist.ui.composable.utils.easing.DipAndRise
+import com.mocharealm.accompanist.ui.composable.utils.easing.EasingOutCubic
+import com.mocharealm.accompanist.ui.composable.utils.easing.Swell
 import com.mocharealm.accompanist.ui.theme.SFPro
 import kotlin.math.pow
 
@@ -146,7 +151,7 @@ private fun calculateBalancedLines(
         // 如果无法找到一个有效的换行方案（比如某个音节本身就超宽），则退回到原始的贪心算法
         // (此处的降级策略代码未实现，为保持简洁，假设总能找到解)
         // Log.w("KaraokeLayout", "Could not find a balanced layout.")
-        calculateGreedyWrappedLines(syllables,availableWidthPx,textMeasurer,style)
+        calculateGreedyWrappedLines(syllables, availableWidthPx, textMeasurer, style)
     }
 
     val lines = mutableListOf<WrappedLine>()
@@ -183,7 +188,10 @@ private fun calculateStaticLineLayout(
             val layout = SyllableLayout(
                 syllable = measuredSyllable.syllable,
                 position = Offset(currentX, lineY),
-                size = Size(measuredSyllable.width, measuredSyllable.textLayoutResult.size.height.toFloat()),
+                size = Size(
+                    measuredSyllable.width,
+                    measuredSyllable.textLayoutResult.size.height.toFloat()
+                ),
                 textLayoutResult = measuredSyllable.textLayoutResult
             )
             currentX += layout.size.width
@@ -196,8 +204,8 @@ private fun createLineGradientBrush(
     lineLayout: List<SyllableLayout>,
     currentTimeMs: Int,
 ): Brush {
-    val activeColor = Color.White.copy(alpha = 0f)
-    val inactiveColor = Color.White.copy(alpha = 0.6f)
+    val activeColor = Color.White
+    val inactiveColor = Color.White.copy(alpha = 0.2f)
     val minFadeWidth = 30f
 
     if (lineLayout.isEmpty()) {
@@ -231,6 +239,7 @@ private fun createLineGradientBrush(
                 val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)
                 activeSyllable.position.x + activeSyllable.size.width * syllableProgress
             }
+
             currentTimeMs >= lastSyllableEnd -> totalWidth
             else -> {
                 val lastFinished = lineLayout.lastOrNull { currentTimeMs >= it.syllable.end }
@@ -246,22 +255,32 @@ private fun createLineGradientBrush(
     }
 
     return when {
-        currentTimeMs >= lastSyllableEnd -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
-        currentTimeMs < firstSyllableStart -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
+        currentTimeMs >= lastSyllableEnd -> Brush.easedHorizontalGradient(
+            0f to activeColor,
+            1f to activeColor
+        )
+
+        currentTimeMs < firstSyllableStart -> Brush.easedHorizontalGradient(
+            0f to inactiveColor,
+            1f to inactiveColor
+        )
+
         currentTimeMs < fadeInEndTime -> {
-            val phaseProgress = ((currentTimeMs - firstSyllableStart) / fadeInDuration).coerceIn(0f, 1f)
+            val phaseProgress =
+                ((currentTimeMs - firstSyllableStart) / fadeInDuration).coerceIn(0f, 1f)
             val dynamicFade = fadeRange * phaseProgress
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to activeColor,
-                    (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
-                    (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
-                    1.0f to inactiveColor
-                )
+            Brush.easedHorizontalGradient(
+                0.0f to activeColor,
+                (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
+                (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
+                1.0f to inactiveColor,
+                steps = 100
             )
         }
+
         currentTimeMs > fadeOutStartTime -> {
-            val phaseProgress = ((currentTimeMs - fadeOutStartTime) / fadeOutDuration).coerceIn(0f, 1f)
+            val phaseProgress =
+                ((currentTimeMs - fadeOutStartTime) / fadeOutDuration).coerceIn(0f, 1f)
             val dynamicFade = fadeRange * (1f - phaseProgress)
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -272,6 +291,7 @@ private fun createLineGradientBrush(
                 )
             )
         }
+
         else -> {
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -294,7 +314,6 @@ private fun DrawScope.drawLine(
 ) {
     lineLayouts.forEach { rowLayouts ->
         // Calculate the progress brush
-        val progressBrush = createLineGradientBrush(rowLayouts, currentTimeMs)
 
         // Draw syllables
         rowLayouts.forEach { syllableLayout ->
@@ -338,14 +357,15 @@ private fun DrawScope.drawLine(
                     val scale = 1f + Swell.transform(awesomeProgress)
 
                     val yPos = syllableLayout.position.y + floatOffset
-                    val xPos = syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(
-                        offset = index,
-                        usePrimaryDirection = true
-                    )
+                    val xPos =
+                        syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(
+                            offset = index,
+                            usePrimaryDirection = true
+                        )
 
                     val blurRadius = 10f * Bounce.transform(awesomeProgress)
                     val shadow = Shadow(
-                        color = color,
+                        color = color.copy(0.4f),
                         offset = Offset(0f, 0f),
                         blurRadius = blurRadius
                     )
@@ -387,12 +407,14 @@ private fun DrawScope.drawLine(
         }
         val width = rowLayouts.last().position.x + rowLayouts.last().size.width
         val height = rowLayouts.maxOf { it.size.height }
+
+        val progressBrush = createLineGradientBrush(rowLayouts, currentTimeMs)
         drawRect(
             brush = progressBrush,
             topLeft = rowLayouts.first().position.copy(y = rowLayouts.first().position.y),
             // TODO: Extract 8f to a constant
-            size = Size(width, height + 12f), // Expand height for float & glow animation
-            blendMode = BlendMode.DstOut
+            size = Size(width, height + 12f),
+            blendMode = BlendMode.DstIn
         )
     }
 }
@@ -404,6 +426,7 @@ private fun DrawScope.drawLine(
 fun KaraokeLineText(
     line: KaraokeLine,
     onLineClicked: (ISyncedLine) -> Unit,
+    onLinePressed: (ISyncedLine) -> Unit,
     currentTimeMs: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -456,10 +479,12 @@ fun KaraokeLineText(
 //                    }
 //                }
 //            }
-            .clickable { onLineClicked(line) }
+            .combinedClickable(onClick = {onLineClicked(line)},onLongClick = {onLinePressed(line)})
+
     ) {
+        val activeColor = Color.White
         Column(
-            Modifier
+            modifier
                 .align(if (line.alignment == KaraokeAlignment.End) Alignment.TopEnd else Alignment.TopStart)
                 .padding(vertical = 8.dp, horizontal = 16.dp)
                 .graphicsLayer {
@@ -474,7 +499,7 @@ fun KaraokeLineText(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalAlignment = if (line.alignment == KaraokeAlignment.Start) Alignment.Start else Alignment.End
         ) {
-            BoxWithConstraints(modifier) {
+            BoxWithConstraints {
                 val density = LocalDensity.current
                 val availableWidthPx = with(density) { maxWidth.toPx() }
 
@@ -532,7 +557,6 @@ fun KaraokeLineText(
                     lineHeight * wrappedLines.size
                 }
 
-                val activeColor = LocalContentColor.current
 
                 Canvas(
                     // TODO: Extract 8 to a constant
@@ -551,7 +575,7 @@ fun KaraokeLineText(
                 val result = remember(translation) {
                     textMeasurer.measure(translation)
                 }
-                val color = LocalContentColor.current.copy(0.6f)
+                val color = activeColor.copy(0.6f)
                 Canvas(
                     modifier = Modifier.size(result.size.toDpSize())
                 ) {

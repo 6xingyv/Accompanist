@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.ui.composable.easing
+package com.mocharealm.accompanist.ui.composable.utils.easing
 
 import androidx.compose.animation.core.CubicBezierEasing
 
