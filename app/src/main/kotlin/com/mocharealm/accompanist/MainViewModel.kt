@@ -47,7 +47,7 @@ data class BackgroundUiState(
 )
 
 // UI需要的所有状态的集合
-data class PlayerUiState(
+data class MainUiState(
     val isReady: Boolean = false, // PlayerController 是否准备好
     val showSelectionDialog: Boolean = true,
     val playbackState: PlaybackState = PlaybackState(),
@@ -57,8 +57,8 @@ data class PlayerUiState(
 
 // PlayerViewModel.kt
 
-class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-    private val _uiState = MutableStateFlow(PlayerUiState())
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val _uiState = MutableStateFlow(MainUiState())
     val uiState = _uiState.asStateFlow()
 
     private var positionUpdateJob: Job? = null
@@ -192,7 +192,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onOpenSongSelection() {
-        controller?.clearMediaItems()
         controller?.stop()
         _uiState.value = _uiState.value.copy(showSelectionDialog = true)
     }
@@ -206,6 +205,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun stopPositionUpdates() {
         positionUpdateJob?.cancel()
+    }
+
+    fun onPlayPause(
+        isPlaying: Boolean
+    ) {
+        if (isPlaying) {
+            controller?.play()
+        } else {
+            controller?.pause()
+        }
+        _uiState.value = _uiState.value.copy(
+            playbackState = _uiState.value.playbackState.copy(
+                isPlaying = isPlaying
+            )
+        )
     }
 
     fun seekTo(position: Long) {
