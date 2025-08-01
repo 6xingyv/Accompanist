@@ -125,6 +125,12 @@ class MainActivity : ComponentActivity() {
                     "TTML(AMLL)",
                     MediaItem.fromUri("asset:///golden-hour.m4a"),
                     "golden-hour.ttml"
+                ),
+                MusicItem(
+                    "好久没下雨了",
+                    "TTML CJK",
+                    MediaItem.fromUri("asset:///havent-rain-for-so-long.mp3"),
+                    "havent-rain-for-so-long.ttml"
                 )
             )
 
