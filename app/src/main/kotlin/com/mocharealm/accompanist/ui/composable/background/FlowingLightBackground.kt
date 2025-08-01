@@ -41,7 +41,6 @@ fun FlowingLightBackground(
         targetState = state,
         animationSpec = tween(durationMillis = 1500),
         label = "background_visual_state_crossfade",
-        modifier = modifier.fillMaxSize()
     ) { currentState ->
         val colorFilter = if (currentState.isBright) {
             ColorFilter.tint(Color.Black.copy(alpha = 0.1f), BlendMode.Darken)
@@ -49,7 +48,7 @@ fun FlowingLightBackground(
             null
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = modifier) {
             val baseModifier = Modifier.scale(3f)
 
             Image(
@@ -91,7 +90,6 @@ fun FlowingLightBackground(
 
 suspend fun calculateAverageBrightness(bitmap: ImageBitmap): Float {
     return withContext(Dispatchers.Default) {
-        // ... 函数内容保持不变 ...
         if (bitmap.width <= 0 || bitmap.height <= 0) return@withContext 0f
         val androidBitmap = bitmap.asAndroidBitmap()
         val width = androidBitmap.width
