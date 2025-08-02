@@ -1,12 +1,9 @@
 package com.mocharealm.accompanist.ui.composable.lyrics
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -34,7 +30,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -149,8 +144,6 @@ private fun calculateBalancedLines(
 
     if (costs[n] == Double.POSITIVE_INFINITY) {
         // 如果无法找到一个有效的换行方案（比如某个音节本身就超宽），则退回到原始的贪心算法
-        // (此处的降级策略代码未实现，为保持简洁，假设总能找到解)
-        // Log.w("KaraokeLayout", "Could not find a balanced layout.")
         calculateGreedyWrappedLines(syllables, availableWidthPx, textMeasurer, style)
     }
 
@@ -159,7 +152,6 @@ private fun calculateBalancedLines(
     while (currentIndex > 0) {
         val startIndex = breaks[currentIndex]
         val lineSyllables = measuredSyllables.subList(startIndex, currentIndex)
-        val lineWidth = lineSyllables.sumOf { it.width.toDouble() }.toFloat()
         // 注意：trimDisplayLineTrailingSpaces 也需要应用在这里
         val trimmedLine = trimDisplayLineTrailingSpaces(lineSyllables, textMeasurer, style)
         lines.add(0, trimmedLine) // 将行添加到列表的开头
@@ -479,7 +471,9 @@ fun KaraokeLineText(
 //                    }
 //                }
 //            }
-            .combinedClickable(onClick = {onLineClicked(line)},onLongClick = {onLinePressed(line)})
+            .combinedClickable(
+                onClick = { onLineClicked(line) },
+                onLongClick = { onLinePressed(line) })
 
     ) {
         val activeColor = Color.White

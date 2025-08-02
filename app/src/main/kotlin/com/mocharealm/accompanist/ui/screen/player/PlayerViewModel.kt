@@ -19,7 +19,6 @@ import com.mocharealm.accompanist.data.repository.MusicRepositoryImpl
 import com.mocharealm.accompanist.domain.model.MusicItem
 import com.mocharealm.accompanist.domain.repository.MusicRepository
 import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.service.PlaybackService
 import com.mocharealm.accompanist.ui.composable.background.BackgroundVisualState
 import com.mocharealm.accompanist.ui.composable.background.calculateAverageBrightness

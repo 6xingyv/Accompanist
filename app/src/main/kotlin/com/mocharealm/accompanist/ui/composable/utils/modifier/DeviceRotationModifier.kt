@@ -19,10 +19,7 @@ fun Modifier.deviceRotation(
     rotationFactor: Float = 0.2f,
     cameraDistance: Float = 12f
 ): Modifier = composed {
-    // composed 块是创建有状态 Modifier 的正确方式。
-    // 它能确保每个使用此 Modifier 的组件都有自己的状态实例。
 
-    // 1. 获取 SensorManager 和 旋转矢量传感器
     val context = LocalContext.current
     val sensorManager = remember {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -31,18 +28,15 @@ fun Modifier.deviceRotation(
         sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     }
 
-    // 如果设备没有旋转矢量传感器，则直接返回原始 Modifier，不做任何处理。
     if (rotationSensor == null) {
         return@composed this
     }
 
-    // 2. 创建状态来保存计算出的俯仰角和翻滚角
+    // 俯仰角和翻滚角
     var pitch by remember { mutableFloatStateOf(0f) }
     var roll by remember { mutableFloatStateOf(0f) }
 
-    // 3. 使用 DisposableEffect 来管理传感器的生命周期
     DisposableEffect(sensorManager, rotationSensor) {
-        // 创建传感器事件监听器
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
@@ -62,33 +56,26 @@ fun Modifier.deviceRotation(
                 }
             }
 
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                // 在这个场景下我们不需要处理精度变化
-            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        // 注册监听器
         sensorManager.registerListener(
             listener,
             rotationSensor,
-            SensorManager.SENSOR_DELAY_UI // 使用适合UI的更新频率
+            SensorManager.SENSOR_DELAY_UI
         )
 
-        // onDispose 块是 DisposableEffect 的核心，它会在 Composable 离开组合时执行
         onDispose {
-            // 注销监听器以防止资源泄漏
             sensorManager.unregisterListener(listener)
         }
     }
 
-    // 4. 应用 graphicsLayer，将状态化的角度值应用到视觉变换上
     this.graphicsLayer {
-        // 乘以一个系数来控制旋转的“轻微”程度
         // 对 pitch 取反可以获得更自然的效果（手机顶部向下倾斜时，UI顶部向远处旋转）
         rotationX = -pitch * rotationFactor
         rotationY = roll * rotationFactor
 
-        // 设置相机距离可以增强 3D 视差效果
+        // 设置相机距离增强 3D 视差效果
         this.cameraDistance = cameraDistance * density
     }
 }

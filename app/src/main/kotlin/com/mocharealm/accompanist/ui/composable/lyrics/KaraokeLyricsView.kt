@@ -52,6 +52,7 @@ import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
 import com.mocharealm.accompanist.ui.theme.SFPro
+import kotlin.math.abs
 
 @Composable
 fun KaraokeLyricsView(
@@ -176,6 +177,7 @@ fun KaraokeLyricsView(
                 key = { index, line -> "${line.start}-${line.end}-$index" }
             ) { index, line ->
                 when (line) {
+
                     is KaraokeLine -> {
                         // Check if the line is the current focus line
                         val index = if (showDotInIntro) index + 1 else index
@@ -184,13 +186,14 @@ fun KaraokeLyricsView(
                                 currentTimeMs
                             )
                         )
-                        val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
-                        val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
 
-                        val lineTimeMs =
-                            if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 50 else 0
 
                         if (!line.isAccompaniment) {
+                            val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
+                            val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
+
+                            val lineTimeMs =
+                                if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 50 else 0
                             KaraokeLineText(
                                 line = line,
                                 onLineClicked = onLineClicked,
@@ -199,6 +202,17 @@ fun KaraokeLyricsView(
                                 modifier = Modifier.fillMaxWidth(if (isDuoView) 0.85f else 1f)
                             )
                         } else {
+                            val isCurrentFocusLine by rememberUpdatedState(
+                                lyrics.lines.filter {
+                                    currentTimeMs in it.start..it.end || (abs(
+                                        currentTimeMs - it.start
+                                    )) < 600 || (abs(currentTimeMs - it.end)) < 600
+                                }.contains(line)
+                            )
+                            val isLineDone by rememberUpdatedState(currentTimeMs - line.end>=600)
+
+                            val lineTimeMs =
+                                if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 600 else 0
                             AnimatedVisibility(
                                 visible = isCurrentFocusLine,
                                 enter = scaleIn(

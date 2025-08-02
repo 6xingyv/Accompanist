@@ -60,7 +60,7 @@ class MusicRepositoryImpl(private val context: Context): MusicRepository {
             } else {
                 lyricsRaw
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Log the exception
             null
         }
