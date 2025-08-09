@@ -1,6 +1,7 @@
 <img src="./artwork/banner.png" style="border-radius: 6px; margin-bottom: 8px">
 
 [![Download](https://img.shields.io/badge/Download-DEMO%20APK-green?logo=github)](https://github.com/6xingyv/Accompanist/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/com.mocharealm.accompanist/lyrics-ui)](https://central.sonatype.com/artifact/com.mocharealm.accompanist/lyrics-ui)
 [![Telegram](https://img.shields.io/badge/Telegram-Community-blue?logo=telegram)](https://t.me/mocha_pot)
 [![Mocha-Realm/Accompanist-Lyrics](https://img.shields.io/badge/Powered%20by-Accompanist--Lyrics-D97852)](https://github.com/Mocha-Realm/Accompanist-Lyrics)
 
@@ -15,6 +16,18 @@
 - **🎶 Accompaniment Line Support**: Intelligently separates and styles main vocals from accompaniment or background lines.
 
 - **⚡️ High-Performance Rendering**: Engineered for buttery-smooth animations and low overhead, ensuring a great user experience even on complex lyrics.
+
+## 🚀 Installation
+
+Add the dependency to your `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.mocharealm.accompanist:lyrics-ui:VERSION")
+}
+```
+
+*Replace `VERSION` with the latest version from Maven Central.*
 
 ## ✅ Todo
 
