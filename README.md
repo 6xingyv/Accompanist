@@ -16,13 +16,9 @@ This repository hosts the `lyrics-ui` code.
 
 ## ✨ Features
 
-- **🌈 Dynamic Gradient Highlighting**: Beautify active lyric lines with fully customizable, animated gradient brushes for a stunning visual effect.
+- **🎤 Multi-Voice & Duet Support**: Effortlessly display lyrics for multiple singers.
 
-- **🎤 Multi-Voice & Duet Support**: Effortlessly manage and display lyrics for multiple singers, perfect for duets and choral pieces.
-
-- **🎨 Precision Text Animation**: Achieve classic karaoke-style highlighting with frame-perfect timing.
-
-- **🎶 Accompaniment Line Support**: Intelligently separates and styles main vocals from accompaniment or background lines.
+- **🎶 Accompaniment Line Support**: Styles main vocals from accompaniment lines.
 
 - **⚡️ High-Performance Rendering**: Engineered for buttery-smooth animations and low overhead, ensuring a great user experience even on complex lyrics.
 
