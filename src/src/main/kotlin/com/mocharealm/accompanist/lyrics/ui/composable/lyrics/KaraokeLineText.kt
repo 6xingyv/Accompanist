@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.lyrics.ui.lyrics
+package com.mocharealm.accompanist.lyrics.ui.composable.lyrics
 
 import android.annotation.SuppressLint
 import android.os.Build
@@ -47,12 +47,11 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mocharealm.accompanist.lyrics.model.ISyncedLine
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeSyllable
+import com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.lyrics.ui.theme.SFPro
-import com.mocharealm.accompanist.ui.composable.lyrics.SyllableLayout
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Bounce
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.DipAndRise
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.EasingOutCubic

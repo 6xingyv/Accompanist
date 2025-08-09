@@ -39,7 +39,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.accompanist.lyrics)
+    implementation(libs.accompanist.lyrics.core)
 }
 
 mavenPublishing {
@@ -53,7 +53,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("com.mocharealm.accompanist", "lyrics-ui", "1.0.0")
+    coordinates("com.mocharealm.accompanist", "lyrics-ui", "1.0.1")
 
     pom {
         name = "Accompanist Lyrics UI"

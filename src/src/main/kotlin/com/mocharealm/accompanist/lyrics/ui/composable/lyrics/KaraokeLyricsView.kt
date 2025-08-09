@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.ui.composable.lyrics
+package com.mocharealm.accompanist.lyrics.ui.composable.lyrics
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -52,13 +52,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mocharealm.accompanist.lyrics.model.ISyncedLine
-import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
-import com.mocharealm.accompanist.lyrics.ui.lyrics.KaraokeBreathingDots
-import com.mocharealm.accompanist.lyrics.ui.lyrics.KaraokeLineText
+import com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine
 import com.mocharealm.accompanist.lyrics.ui.theme.SFPro
 import kotlin.math.abs
 

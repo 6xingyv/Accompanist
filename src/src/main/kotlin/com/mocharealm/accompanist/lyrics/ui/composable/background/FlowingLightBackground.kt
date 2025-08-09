@@ -1,5 +1,4 @@
-// FlowingLightBackground.kt
-package com.mocharealm.accompanist.lyrics.ui.background
+package com.mocharealm.accompanist.lyrics.ui.composable.background
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box

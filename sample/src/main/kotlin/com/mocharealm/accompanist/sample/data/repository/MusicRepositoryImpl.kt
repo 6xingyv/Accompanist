@@ -2,10 +2,10 @@ package com.mocharealm.accompanist.sample.data.repository
 
 import android.content.Context
 import androidx.media3.common.MediaItem
-import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.model.synced.SyncedLine
-import com.mocharealm.accompanist.lyrics.parser.AutoParser
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine
+import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import com.mocharealm.accompanist.sample.domain.model.MusicItem
 import com.mocharealm.accompanist.sample.domain.repository.MusicRepository
 

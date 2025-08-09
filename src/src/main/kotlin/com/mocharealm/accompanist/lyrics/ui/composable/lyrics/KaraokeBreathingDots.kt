@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.lyrics.ui.lyrics
+package com.mocharealm.accompanist.lyrics.ui.composable.lyrics
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeAlignment
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
 import kotlin.math.PI
 import kotlin.math.sin
 

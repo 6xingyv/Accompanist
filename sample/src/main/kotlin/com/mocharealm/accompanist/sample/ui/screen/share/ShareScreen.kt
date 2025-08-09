@@ -57,9 +57,9 @@ import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.ui.background.BackgroundVisualState
-import com.mocharealm.accompanist.lyrics.ui.background.FlowingLightBackground
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.ui.composable.background.BackgroundVisualState
+import com.mocharealm.accompanist.lyrics.ui.composable.background.FlowingLightBackground
 import com.mocharealm.accompanist.sample.ui.composable.utils.Capturable
 import com.mocharealm.accompanist.sample.ui.composable.utils.CapturableController
 import com.mocharealm.accompanist.sample.ui.composable.utils.rememberCapturableController

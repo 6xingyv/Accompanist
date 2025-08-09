@@ -8,9 +8,9 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.ui.background.BackgroundVisualState
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.ui.composable.background.BackgroundVisualState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

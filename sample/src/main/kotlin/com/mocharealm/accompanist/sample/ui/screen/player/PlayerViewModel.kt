@@ -18,8 +18,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.mocharealm.accompanist.sample.data.repository.MusicRepositoryImpl
 import com.mocharealm.accompanist.sample.domain.model.MusicItem
 import com.mocharealm.accompanist.sample.domain.repository.MusicRepository
-import com.mocharealm.accompanist.lyrics.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.ui.background.BackgroundVisualState
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.ui.composable.background.BackgroundVisualState
 import com.mocharealm.accompanist.sample.service.PlaybackService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

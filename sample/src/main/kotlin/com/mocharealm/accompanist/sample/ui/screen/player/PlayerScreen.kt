@@ -42,15 +42,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.mocharealm.accompanist.sample.domain.model.MusicItem
-import com.mocharealm.accompanist.lyrics.model.karaoke.KaraokeLine
-import com.mocharealm.accompanist.lyrics.ui.background.BackgroundVisualState
-import com.mocharealm.accompanist.lyrics.ui.background.FlowingLightBackground
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.ui.composable.background.BackgroundVisualState
+import com.mocharealm.accompanist.lyrics.ui.composable.background.FlowingLightBackground
 import com.mocharealm.accompanist.lyrics.ui.theme.SFPro
 import com.mocharealm.accompanist.sample.ui.screen.share.ShareViewModel
 import com.mocharealm.accompanist.sample.ui.composable.ModalScaffold
 import com.mocharealm.accompanist.sample.ui.screen.share.ShareContext
 import com.mocharealm.accompanist.sample.ui.screen.share.ShareScreen
-import com.mocharealm.accompanist.ui.composable.lyrics.KaraokeLyricsView
+import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeLyricsView
 import kotlinx.coroutines.android.awaitFrame
 import org.koin.androidx.compose.koinViewModel
 

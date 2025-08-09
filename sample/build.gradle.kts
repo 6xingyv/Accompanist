@@ -98,7 +98,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
-    implementation(libs.accompanist.lyrics)
+    implementation(libs.accompanist.lyrics.core)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.androidx.compose)
