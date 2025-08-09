@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/your_file.kt">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/your_file.kt" />
+              <option name="updatedContent" value="// ...existing code...&#10;    val firstSyllableStart = lineLayout.first().syllable.start&#10;    val lastSyllableEnd = lineLayout.last().syllable.end&#10;// ...existing code...&#10;    val fadeInEndTime = firstSyllableStart + fadeInDuration&#10;    val fadeOutStartTime = lastSyllableEnd - fadeOutDuration&#10;&#10;    val lineProgress = run {&#10;        val activeSyllable = lineLayout.find {&#10;            currentTimeMs in it.syllable.start until it.syllable.end&#10;        }&#10;&#10;        val currentPixelPosition = when {&#10;            activeSyllable != null -&gt; {&#10;                // 在当前音节内，根据音节进度计算像素位置&#10;                val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)&#10;                activeSyllable.position.x + activeSyllable.size.width * syllableProgress&#10;            }&#10;&#10;            currentTimeMs &gt;= lastSyllableEnd -&gt; totalWidth // 整行结束&#10;&#10;            currentTimeMs &lt; firstSyllableStart -&gt; 0f // 整行未开始&#10;&#10;            else -&gt; {&#10;                // 在音节之间，实现平滑过渡&#10;                val lastFinishedIndex = lineLayout.indexOfLast { currentTimeMs &gt;= it.syllable.end }&#10;                val lastFinished = lineLayout.getOrNull(lastFinishedIndex)&#10;                val nextSyllable = lineLayout.getOrNull(lastFinishedIndex + 1)&#10;&#10;                if (lastFinished != null &amp;&amp; nextSyllable != null) {&#10;                    val gapStartTime = lastFinished.syllable.end&#10;                    val gapEndTime = nextSyllable.syllable.start&#10;                    val gapDuration = gapEndTime - gapStartTime&#10;&#10;                    val startPixel = lastFinished.position.x + lastFinished.size.width&#10;                    val endPixel = nextSyllable.position.x&#10;&#10;                    if (gapDuration &gt; 0) {&#10;                        val gapProgress = (currentTimeMs - gapStartTime).toFloat() / gapDuration&#10;                        // 在上一个音节末尾和下一个音节开头之间进行线性插值&#10;                        startPixel + (endPixel - startPixel) * gapProgress&#10;                    } else {&#10;                        // 如果没有间隙，直接跳到下一个音节的开始位置&#10;                        endPixel&#10;                    }&#10;                } else {&#10;                    // 理论上不应发生，作为备用&#10;                    val lastFinishedSyllable = lineLayout.lastOrNull { currentTimeMs &gt;= it.syllable.end }&#10;                    lastFinishedSyllable?.let { it.position.x + it.size.width } ?: 0f&#10;                }&#10;            }&#10;        }&#10;        (currentPixelPosition / totalWidth).coerceIn(0f, 1f)&#10;    }&#10;&#10;    val fadeRange = run {&#10;// ...existing code...&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

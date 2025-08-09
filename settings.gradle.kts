@@ -19,6 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Accompanist"
-include(":app")
+rootProject.name = "lyrics-ui"
+include(":src")
+include(":sample")
  
