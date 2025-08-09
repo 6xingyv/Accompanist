@@ -3,7 +3,16 @@
 [![Download](https://img.shields.io/badge/Download-DEMO%20APK-green?logo=github)](https://github.com/6xingyv/Accompanist/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/com.mocharealm.accompanist/lyrics-ui)](https://central.sonatype.com/artifact/com.mocharealm.accompanist/lyrics-ui)
 [![Telegram](https://img.shields.io/badge/Telegram-Community-blue?logo=telegram)](https://t.me/mocha_pot)
-[![Mocha-Realm/Accompanist-Lyrics](https://img.shields.io/badge/Powered%20by-Accompanist--Lyrics-D97852)](https://github.com/Mocha-Realm/Accompanist-Lyrics)
+
+## 📦 Repository
+
+Accompanist released a group of artifacts, including: 
+
+- [`lyrics-core`](https://github.com/6xingyv/Accompanist-Lyrics) - Parsing lyrics file, holding data and exporting to other formats.
+
+- [`lyrics-ui`](https://github.com/6xingyv/Accompanist) - Standard lyrics interface built on Jetpack Compose
+
+This repository hosts the `lyrics-ui` code.
 
 ## ✨ Features
 
