@@ -30,6 +30,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +52,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
@@ -92,10 +92,6 @@ fun ShareScreen(
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-//            Text(
-//                text = "Dismiss",
-//                Modifier.align(Alignment.CenterStart)
-//            )
             Text(
                 text = "Share",
                 Modifier.align(Alignment.Center),
@@ -200,7 +196,7 @@ private fun ColumnScope.ShareSelectionStep(
             ) {
                 Text(
                     karaokeLine.content(),
-                    style = TextStyle(
+                    style = LocalTextStyle.current.copy(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         textMotion = TextMotion.Animated
@@ -256,7 +252,6 @@ private fun ColumnScope.ShareGenerateStep(
 ) {
     BackHandler { onBackPressed() }
     var showTranslation by remember { mutableStateOf(true) }
-    val capturableController = rememberCapturableController()
     val localContext = LocalContext.current
     LaunchedEffect(Unit) {
         shareViewModel.toastEvent.collect { message ->
@@ -281,6 +276,9 @@ private fun ColumnScope.ShareGenerateStep(
     val pagerState = rememberPagerState {
         2
     }
+    val capturableControllers = List(pagerState.pageCount) {
+        rememberCapturableController()
+    }
     HorizontalPager(
         pagerState,
         Modifier
@@ -292,14 +290,15 @@ private fun ColumnScope.ShareGenerateStep(
             ),
         beyondViewportPageCount = 2
     ) { pageNumber ->
-        Box(Modifier
-            .fillMaxSize()
-            .pagerCubeInDepthTransition(pageNumber, pagerState)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pagerCubeInDepthTransition(pageNumber, pagerState)
         ) {
             when (pageNumber) {
                 0 -> {
                     ShareCardApple(
-                        capturableController = capturableController,
+                        capturableController = capturableControllers[pageNumber],
                         backgroundState = context.backgroundState,
                         showTranslation = showTranslation,
                         selectedLines = selectedLines,
@@ -309,7 +308,7 @@ private fun ColumnScope.ShareGenerateStep(
 
                 1 -> {
                     ShareCardSpotify(
-                        capturableController = capturableController,
+                        capturableController = capturableControllers[pageNumber],
                         showTranslation = showTranslation,
                         selectedLines = selectedLines,
                         modifier = Modifier.align(Alignment.Center)
@@ -370,7 +369,7 @@ private fun ColumnScope.ShareGenerateStep(
                     .clip(RoundedCornerShape(100))
                     .background(Color(0xFF3482FF))
                     .clickable(enabled = selectedLines.isNotEmpty()) {
-                        capturableController.capture { bitmap ->
+                        capturableControllers[pagerState.currentPage].capture { bitmap ->
                             shareViewModel.saveBitmapToGallery(
                                 localContext,
                                 bitmap.asAndroidBitmap()
@@ -388,7 +387,7 @@ private fun ColumnScope.ShareGenerateStep(
                     .clip(RoundedCornerShape(100))
                     .background(Color(0xFF3482FF))
                     .clickable(enabled = selectedLines.isNotEmpty()) {
-                        capturableController.capture { bitmap ->
+                        capturableControllers[pagerState.currentPage].capture { bitmap ->
                             shareViewModel.prepareForSharing(localContext, bitmap.asAndroidBitmap())
                         }
                     }
@@ -415,71 +414,76 @@ fun ShareCardApple(
             .shadow(16.dp, RoundedCornerShape(16.dp))
     ) {
         Capturable(
-            controller = capturableController
+            controller = capturableController,
         ) {
-            FlowingLightBackground(state = backgroundState, modifier = Modifier.matchParentSize())
-
-            LazyColumn(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .graphicsLayer {
-                        blendMode = BlendMode.Plus
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    },
-//                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Box(
+                modifier = Modifier.clip(RoundedCornerShape(16.dp))
             ) {
-                items(selectedLines, key = { it.start }) { line ->
-                    Column(
-                        Modifier
-                            .padding(top = 16.dp)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            line.content(),
-                            style = TextStyle(
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                textMotion = TextMotion.Animated
-                            ),
-                            color = Color.White.copy(0.4f)
-                        )
-                        AnimatedVisibility(showTranslation) {
-                            line.translation?.let { translation ->
-                                Text(
-                                    translation,
-                                    color = Color.White.copy(0.8f)
-                                )
+                FlowingLightBackground(
+                    state = backgroundState,
+                    modifier = Modifier.matchParentSize()
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            blendMode = BlendMode.Plus
+                            compositingStrategy = CompositingStrategy.Offscreen
+                        }
+                ) {
+                    items(selectedLines, key = { it.start }) { line ->
+                        Column(
+                            Modifier
+                                .padding(top = 16.dp)
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text(
+                                line.content(),
+                                style = LocalTextStyle.current.copy(
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textMotion = TextMotion.Animated
+                                ),
+                                color = Color.White.copy(0.4f)
+                            )
+                            AnimatedVisibility(showTranslation) {
+                                line.translation?.let { translation ->
+                                    Text(
+                                        translation,
+                                        color = Color.White.copy(0.8f)
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                item("spacing") {
-                    Spacer(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(16.dp)
-                    )
-                }
-                item("logo") {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Color.White.copy(0.1f))
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            "by Accompanist",
-                            style = TextStyle(
-                                fontSize = 16.sp,
-                                textMotion = TextMotion.Animated
-                            ),
-                            color = Color.White
+                    item("spacing") {
+                        Spacer(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(16.dp)
                         )
+                    }
+                    item("logo") {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(Color.White.copy(0.1f))
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                "by Accompanist",
+                                style = LocalTextStyle.current.copy(
+                                    fontSize = 16.sp,
+                                    textMotion = TextMotion.Animated
+                                ),
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
-        }
 
+
+        }
     }
 }
 
@@ -516,7 +520,7 @@ fun ShareCardSpotify(
                     ) {
                         Text(
                             line.content(),
-                            style = TextStyle(
+                            style = LocalTextStyle.current.copy(
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 textMotion = TextMotion.Animated
@@ -549,7 +553,7 @@ fun ShareCardSpotify(
                     ) {
                         Text(
                             "by Accompanist",
-                            style = TextStyle(
+                            style = LocalTextStyle.current.copy(
                                 fontSize = 16.sp,
                                 textMotion = TextMotion.Animated
                             ),

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -547,13 +548,13 @@ fun KaraokeLineText(
     currentTimeMs: Int,
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
-    normalTextStyle: TextStyle = TextStyle(
+    normalTextStyle: TextStyle = LocalTextStyle.current.copy(
         fontSize = 34.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = SFPro,
         textMotion = TextMotion.Animated,
     ),
-    accompanimentTextStyle: TextStyle = TextStyle(
+    accompanimentTextStyle: TextStyle = LocalTextStyle.current.copy(
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = SFPro,
