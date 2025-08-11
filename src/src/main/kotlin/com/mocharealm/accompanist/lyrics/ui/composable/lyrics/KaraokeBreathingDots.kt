@@ -31,9 +31,9 @@ data class KaraokeBreathingDotsDefaults(
     val size: Dp = 16.dp,
     val margin: Dp = 12.dp,
     val enterDurationMs: Int = 3000,
-    val preExitStillDuration: Int = 600,
+    val preExitStillDuration: Int = 200,
     val preExitDipAndRiseDuration: Int = 3000,
-    val exitDurationMs: Int = 300,
+    val exitDurationMs: Int = 200,
 )
 
 @Composable
