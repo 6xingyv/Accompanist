@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 
+@Suppress("DEPRECATION")
 fun blurBitmapWithRenderScript(context: Context, bitmap: Bitmap, radius: Float): Bitmap {
     val rs = RenderScript.create(context)
     val input = Allocation.createFromBitmap(rs, bitmap)

@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -52,6 +54,7 @@ import com.mocharealm.accompanist.lyrics.ui.utils.easing.Bounce
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.DipAndRise
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.EasingOutCubic
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Swell
+import com.mocharealm.accompanist.lyrics.ui.utils.isPureCjk
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -122,7 +125,6 @@ private fun measureSyllablesAndDetermineAnimation(
                 textLayoutResult = textMeasurer.measure(syllable.content, style),
                 wordId = wordIndex,
                 useAwesomeAnimation = useAwesomeAnimation
-                // 其他布局字段保留默认值
             )
         }
     }
@@ -388,45 +390,14 @@ private fun createLineGradientBrush(
 }
 
 
-fun Char.isCjk(): Boolean {
-    val cjkBlock = mutableListOf(
-        Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS,
-        Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A,
-        Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B,
-        Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_C,
-        Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_D,
-        Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS,
-        Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION,
-        Character.UnicodeBlock.HIRAGANA,
-        Character.UnicodeBlock.KATAKANA,
-        Character.UnicodeBlock.HANGUL_SYLLABLES,
-        Character.UnicodeBlock.HANGUL_JAMO,
-        Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO
-    )
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        cjkBlock.add(Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_E)
-        cjkBlock.add(Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_F)
-        cjkBlock.add(Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_G)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-        cjkBlock.add(Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_H)
-    }
-    return Character.UnicodeBlock.of(this) in cjkBlock
-}
 
-fun String.isPureCjk(): Boolean {
-    val cleanedStr = this.filter { it != ' ' && it != ',' && it != '\n' && it != '\r' }
-    if (cleanedStr.isEmpty()) {
-        return false
-    }
-    return cleanedStr.all { it.isCjk() }
-}
 
 fun DrawScope.drawLine(
     lineLayouts: List<List<SyllableLayout>>,
     currentTimeMs: Int,
     color: Color,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    showDebugRectangles: Boolean = true
 ) {
     lineLayouts.forEach { rowLayouts ->
         if (rowLayouts.isEmpty()) return@forEach
@@ -481,6 +452,14 @@ fun DrawScope.drawLine(
                                 shadow = shadow,
                                 blendMode = BlendMode.Plus
                             )
+                            if (showDebugRectangles) {
+                                drawRect(
+                                    color = Color.Red,
+                                    topLeft = Offset(xPos, yPos),
+                                    size = Size(charLayoutResult.size.width.toFloat(), charLayoutResult.size.height.toFloat()),
+                                    style = Stroke(2f)
+                                )
+                            }
                         }
                     }
                 } else {
@@ -493,6 +472,17 @@ fun DrawScope.drawLine(
                         topLeft = finalPosition,
                         blendMode = BlendMode.Plus
                     )
+                    if (showDebugRectangles) {
+                        drawRect(
+                            color = Color.Red,
+                            topLeft = finalPosition,
+                            size = Size(
+                                syllableLayout.textLayoutResult.size.width.toFloat(),
+                                syllableLayout.textLayoutResult.size.height.toFloat()
+                            ),
+                            style = Stroke(2f)
+                        )
+                    }
                 }
             }
 
@@ -514,7 +504,7 @@ fun KaraokeLineText(
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
     normalLineTextStyle: TextStyle,
-    accompanimentLineTextStyle: TextStyle
+    accompanimentLineTextStyle: TextStyle,
 ) {
     val isFocused = line.isFocused(currentTimeMs)
     val textMeasurer = rememberTextMeasurer()
@@ -553,9 +543,17 @@ fun KaraokeLineText(
                 }
 
                 // 1. 测量并产出 "半成品" Layout 对象
-                val initialLayouts = remember(line.syllables, textStyle, textMeasurer, line.isAccompaniment) {
+                val processedSyllables = remember(line.syllables, line.alignment) {
+                    if (line.alignment == KaraokeAlignment.End) {
+                        // 去除末尾空白音节
+                        line.syllables.dropLastWhile { it.content.isBlank() }
+                    } else {
+                        line.syllables
+                    }
+                }
+                val initialLayouts = remember(processedSyllables, textStyle, textMeasurer, line.isAccompaniment) {
                     measureSyllablesAndDetermineAnimation(
-                        syllables = line.syllables,
+                        syllables = processedSyllables,
                         textMeasurer = textMeasurer,
                         style = textStyle,
                         isAccompanimentLine = line.isAccompaniment
@@ -621,9 +619,18 @@ private fun trimDisplayLineTrailingSpaces(
     }
 
     val processedSyllables = displayLineSyllables.toMutableList()
-    val lastIndex = processedSyllables.lastIndex
-    val lastLayout = processedSyllables[lastIndex]
+    var lastIndex = processedSyllables.lastIndex
 
+    while (lastIndex >= 0 && processedSyllables[lastIndex].syllable.content.isBlank()) {
+        processedSyllables.removeAt(lastIndex)
+        lastIndex--
+    }
+
+    if (processedSyllables.isEmpty()) {
+        return WrappedLine(emptyList(), 0f)
+    }
+
+    val lastLayout = processedSyllables.last()
     val originalContent = lastLayout.syllable.content
     val trimmedContent = originalContent.trimEnd()
 
@@ -632,16 +639,16 @@ private fun trimDisplayLineTrailingSpaces(
             val trimmedLayoutResult = textMeasurer.measure(trimmedContent, style)
             val trimmedLayout = lastLayout.copy(
                 syllable = lastLayout.syllable.copy(content = trimmedContent),
-                textLayoutResult = trimmedLayoutResult
+                textLayoutResult = trimmedLayoutResult,
+                width = trimmedLayoutResult.size.width.toFloat()
             )
-            processedSyllables[lastIndex] = trimmedLayout
+            processedSyllables[processedSyllables.lastIndex] = trimmedLayout
         } else {
-            processedSyllables.removeAt(lastIndex)
+            processedSyllables.removeAt(processedSyllables.lastIndex)
         }
     }
 
     val totalWidth = processedSyllables.sumOf { it.width.toDouble() }.toFloat()
-
     return WrappedLine(processedSyllables, totalWidth)
 }
 
