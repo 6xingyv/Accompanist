@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -68,7 +71,19 @@ fun KaraokeLyricsView(
     currentPosition: Long,
     onLineClicked: (ISyncedLine) -> Unit,
     onLinePressed: (ISyncedLine) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    normalLineTextStyle: TextStyle = LocalTextStyle.current.copy(
+        fontSize = 34.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = SFPro,
+        textMotion = TextMotion.Animated,
+    ),
+    accompanimentLineTextStyle: TextStyle = LocalTextStyle.current.copy(
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = SFPro,
+        textMotion = TextMotion.Animated,
+    ),
 ) {
     val currentTimeMs by rememberUpdatedState(currentPosition.toInt())
 
@@ -193,123 +208,119 @@ fun KaraokeLyricsView(
                 key = { index, line -> "${line.start}-${line.end}-$index" }
             ) { index, line ->
 
-                    when (line) {
+                when (line) {
 
-                        is KaraokeLine -> {
-                            if (!line.isAccompaniment) {
-                                val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
-                                val positionToFocusedLine = remember(index, allFocusedLineIndex) {
-                                    val isCurrentFocusLine = index in allFocusedLineIndex
+                    is KaraokeLine -> {
+                        if (!line.isAccompaniment) {
+                            val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
+                            val positionToFocusedLine = remember(index, allFocusedLineIndex) {
+                                val isCurrentFocusLine = index in allFocusedLineIndex
 
-                                    val position = if (isCurrentFocusLine) {
-                                        0
-                                    } else if (allFocusedLineIndex.isNotEmpty() && index > allFocusedLineIndex.last()) {
-                                        index - allFocusedLineIndex.last()
-                                    } else if (allFocusedLineIndex.isNotEmpty() && index < allFocusedLineIndex.first()) {
-                                        allFocusedLineIndex.first() - index
-                                    } else {
-                                        2
-                                    }
-                                    position.toFloat()
+                                val position = if (isCurrentFocusLine) {
+                                    0
+                                } else if (allFocusedLineIndex.isNotEmpty() && index > allFocusedLineIndex.last()) {
+                                    index - allFocusedLineIndex.last()
+                                } else if (allFocusedLineIndex.isNotEmpty() && index < allFocusedLineIndex.first()) {
+                                    allFocusedLineIndex.first() - index
+                                } else {
+                                    2
                                 }
+                                position.toFloat()
+                            }
 
-                                val blurRadius by animateDpAsState(
-                                    targetValue = if (listState.isScrollInProgress && !isScrollProgrammatically) {
-                                        0.dp
-                                    } else {
-                                        positionToFocusedLine.coerceAtMost(10f).dp
-                                    },
-                                    label = "blurAnimation"
-                                )
+                            val blurRadius by animateDpAsState(
+                                targetValue = if (listState.isScrollInProgress && !isScrollProgrammatically) {
+                                    0.dp
+                                } else {
+                                    positionToFocusedLine.coerceAtMost(10f).dp
+                                },
+                                label = "blurAnimation"
+                            )
 
-                                val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
+                            val isLineDone by rememberUpdatedState(currentTimeMs >= line.end)
 
-                                val lineTimeMs =
-                                    if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 50 else 0
+                            val lineTimeMs =
+                                if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 50 else 0
+                            KaraokeLineText(
+                                line = line,
+                                onLineClicked = onLineClicked,
+                                onLinePressed = onLinePressed,
+                                currentTimeMs = lineTimeMs,
+                                modifier = Modifier
+                                    .fillMaxWidth(if (isDuoView) 0.85f else 1f)
+                                    .blur(
+                                        blurRadius,
+                                        BlurredEdgeTreatment.Unbounded
+                                    ),
+                                normalLineTextStyle = normalLineTextStyle,
+                                accompanimentLineTextStyle = accompanimentLineTextStyle,
+                            )
+                        } else {
+                            val isCurrentFocusLine by rememberUpdatedState(
+                                lyrics.lines.filter {
+                                    currentTimeMs in it.start..it.end || (abs(
+                                        currentTimeMs - it.start
+                                    )) < 600 || (abs(currentTimeMs - it.end)) < 600
+                                }.contains(line)
+                            )
+                            val isLineDone by rememberUpdatedState(currentTimeMs - line.end >= 600)
+
+                            val lineTimeMs =
+                                if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 600 else 0
+                            AnimatedVisibility(
+                                visible = isCurrentFocusLine,
+                                enter = scaleIn(
+                                    transformOrigin = TransformOrigin(
+                                        if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
+                                        0f
+                                    ),
+                                    animationSpec = tween(600)
+                                ) + fadeIn() + slideInVertically(
+                                    animationSpec = tween(600)
+                                ) + expandVertically(
+                                    animationSpec = tween(600)
+                                ),
+                                exit = scaleOut(
+                                    transformOrigin = TransformOrigin(
+                                        if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
+                                        0f
+                                    ),
+                                    animationSpec = tween(600)
+                                ) + fadeOut() + slideOutVertically(animationSpec = tween(600)) + shrinkVertically(
+                                    animationSpec = tween(600)
+                                ),
+                            ) {
                                 KaraokeLineText(
                                     line = line,
                                     onLineClicked = onLineClicked,
                                     onLinePressed = onLinePressed,
                                     currentTimeMs = lineTimeMs,
-                                    modifier = Modifier
-                                        .fillMaxWidth(if (isDuoView) 0.85f else 1f)
-                                        .blur(
-                                            blurRadius,
-                                            BlurredEdgeTreatment.Unbounded
-                                        )
+                                    Modifier
+                                        .fillMaxWidth(if (isDuoView) 0.85f else 1f).alpha(0.8f),
+                                    normalLineTextStyle = normalLineTextStyle,
+                                    accompanimentLineTextStyle = accompanimentLineTextStyle,
                                 )
-                            } else {
-                                val isCurrentFocusLine by rememberUpdatedState(
-                                    lyrics.lines.filter {
-                                        currentTimeMs in it.start..it.end || (abs(
-                                            currentTimeMs - it.start
-                                        )) < 600 || (abs(currentTimeMs - it.end)) < 600
-                                    }.contains(line)
-                                )
-                                val isLineDone by rememberUpdatedState(currentTimeMs - line.end >= 600)
+                            }
+                        }
+                    }
 
-                                val lineTimeMs =
-                                    if (isCurrentFocusLine) currentTimeMs else if (isLineDone) line.end + 600 else 0
-                                AnimatedVisibility(
-                                    visible = isCurrentFocusLine,
-                                    enter = scaleIn(
-                                        transformOrigin = TransformOrigin(
-                                            if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
-                                            0f
-                                        ),
-                                        animationSpec = tween(600)
-                                    ) + fadeIn() + slideInVertically(
-                                        animationSpec = tween(600)
-                                    ) + expandVertically(
-                                        animationSpec = tween(600)
-                                    ),
-                                    exit = scaleOut(
-                                        transformOrigin = TransformOrigin(
-                                            if (line.alignment == KaraokeAlignment.Start) 0f else 1f,
-                                            0f
-                                        ),
-                                        animationSpec = tween(600)
-                                    ) + fadeOut() + slideOutVertically(animationSpec = tween(600)) + shrinkVertically(
-                                        animationSpec = tween(600)
-                                    )
-                                ) {
-                                    KaraokeLineText(
-                                        line = line,
-                                        onLineClicked = onLineClicked,
-                                        onLinePressed = onLinePressed,
-                                        currentTimeMs = lineTimeMs,
-                                        Modifier
-                                            .fillMaxWidth(if (isDuoView) 0.85f else 1f)
-                                    )
+                    is SyncedLine -> {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                        ) {
+                            Column(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(vertical = 8.dp, horizontal = 16.dp)
+                            ) {
+                                Text(text = line.content, style = normalLineTextStyle)
+                                line.translation?.let {
+                                    Text(it, color = Color.White.copy(0.6f))
                                 }
                             }
                         }
-
-                        is SyncedLine -> {
-                            val style = remember {
-                                TextStyle(
-                                    fontSize = 34.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = SFPro,
-                                    textMotion = TextMotion.Animated
-                                )
-                            }
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                            ) {
-                                Column(
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(vertical = 8.dp, horizontal = 16.dp)
-                                ) {
-                                    Text(text = line.content, style = style)
-                                    line.translation?.let {
-                                        Text(it, color = Color.White.copy(0.6f))
-                                    }
-                                }
-                            }
 
                     }
                 }
