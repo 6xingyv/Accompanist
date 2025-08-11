@@ -12,7 +12,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        minSdk = 31
+        minSdk = 29
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -53,7 +53,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("com.mocharealm.accompanist", "lyrics-ui", "1.0.1")
+    coordinates("com.mocharealm.accompanist", "lyrics-ui", "1.0.3")
 
     pom {
         name = "Accompanist Lyrics UI"

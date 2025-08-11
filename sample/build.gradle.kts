@@ -17,8 +17,8 @@ android {
         applicationId = "com.mocharealm.accompanist.demo"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0-flight-202509091938"
+        versionCode = 3
+        versionName = "1.0.3-flight"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
