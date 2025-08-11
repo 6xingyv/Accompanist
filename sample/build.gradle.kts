@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.mocharealm.accompanist.demo"
-        minSdk = 33
+        minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0-flight-202509091938"
@@ -99,6 +99,8 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.accompanist.lyrics.core)
+
+    implementation(libs.cloudy)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.androidx.compose)

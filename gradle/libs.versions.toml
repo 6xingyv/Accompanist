@@ -34,7 +34,7 @@ androidx-media3-session = { group = "androidx.media3", name = "media3-session", 
 accompanist-lyrics-core = { module = "com.mocharealm.accompanist:lyrics-core", version = "0.2.1" }
 koin-bom = { group = "io.insert-koin", name = "koin-bom", version = "4.1.0" }
 koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose" }
-
+cloudy = { module = "com.github.skydoves:cloudy",version="0.2.7"}
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
