@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -40,19 +39,15 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
-import com.mocharealm.accompanist.lyrics.ui.theme.SFPro
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Bounce
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.DipAndRise
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.EasingOutCubic
@@ -235,6 +230,7 @@ private fun createLineGradientBrush(
                 val syllableProgress = activeSyllable.syllable.progress(currentTimeMs)
                 activeSyllable.position.x + activeSyllable.size.width * syllableProgress
             }
+
             currentTimeMs >= lastSyllableEnd -> totalWidth
             else -> {
                 val lastFinished = lineLayout.lastOrNull { currentTimeMs >= it.syllable.end }
@@ -249,45 +245,86 @@ private fun createLineGradientBrush(
         (fadeWidthPx / totalWidth).coerceAtMost(1f)
     }
 
-    return when {
-        currentTimeMs >= lastSyllableEnd -> Brush.horizontalGradient(colors = listOf(activeColor, activeColor))
-        currentTimeMs < firstSyllableStart -> Brush.horizontalGradient(colors = listOf(inactiveColor, inactiveColor))
-        currentTimeMs < fadeInEndTime -> {
-            val phaseProgress = ((currentTimeMs - firstSyllableStart) / fadeInDuration).coerceIn(0f, 1f)
-            val dynamicFade = fadeRange * phaseProgress
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to activeColor,
-                    (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
-                    (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
-                    1.0f to inactiveColor
-                ),
+    fun lerpColor(start: Color, end: Color, fraction: Float): Color {
+        return Color(
+            red = (start.red + (end.red - start.red) * fraction),
+            green = (start.green + (end.green - start.green) * fraction),
+            blue = (start.blue + (end.blue - start.blue) * fraction),
+            alpha = (start.alpha + (end.alpha - start.alpha) * fraction)
+        )
+    }
 
-                endX =totalWidth
+    return when {
+        currentTimeMs >= lastSyllableEnd -> Brush.horizontalGradient(
+            colors = listOf(
+                activeColor,
+                activeColor
+            )
+        )
+
+        currentTimeMs < firstSyllableStart -> Brush.horizontalGradient(
+            colors = listOf(
+                inactiveColor,
+                inactiveColor
+            )
+        )
+
+        currentTimeMs < fadeInEndTime -> {
+            val phaseProgress =
+                ((currentTimeMs - firstSyllableStart) / fadeInDuration).coerceIn(0f, 1f)
+            val dynamicFade = fadeRange * phaseProgress
+            val fadeStart = (lineProgress - dynamicFade / 2).coerceAtLeast(0f)
+            val fadeEnd = (lineProgress + dynamicFade / 2).coerceAtMost(1f)
+            Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0.0f to activeColor,
+                    fadeStart to activeColor,
+                    ((fadeStart + fadeEnd) / 2f) to lerpColor(
+                        activeColor,
+                        inactiveColor,
+                        phaseProgress
+                    ),
+                    fadeEnd to inactiveColor,
+                    1.0f to inactiveColor
+                ),
+                endX = totalWidth
             )
         }
+
         currentTimeMs > fadeOutStartTime -> {
-            val phaseProgress = ((currentTimeMs - fadeOutStartTime) / fadeOutDuration).coerceIn(0f, 1f)
+            val phaseProgress =
+                ((currentTimeMs - fadeOutStartTime) / fadeOutDuration).coerceIn(0f, 1f)
             val dynamicFade = fadeRange * (1f - phaseProgress)
+            val fadeStart = (lineProgress - dynamicFade / 2).coerceAtLeast(0f)
+            val fadeEnd = (lineProgress + dynamicFade / 2).coerceAtMost(1f)
             Brush.horizontalGradient(
                 colorStops = arrayOf(
                     0.0f to activeColor,
-                    (lineProgress - dynamicFade / 2).coerceAtLeast(0f) to activeColor,
-                    (lineProgress + dynamicFade / 2).coerceAtMost(1f) to inactiveColor,
+                    fadeStart to activeColor,
+                    ((fadeStart + fadeEnd) / 2f) to lerpColor(
+                        activeColor,
+                        inactiveColor,
+                        phaseProgress
+                    ),
+                    fadeEnd to inactiveColor,
                     1.0f to inactiveColor
                 ),
-                        endX =totalWidth
+                endX = totalWidth
             )
         }
+
         else -> {
+            val fadeStart = (lineProgress - fadeRange / 2).coerceAtLeast(0f)
+            val fadeEnd = (lineProgress + fadeRange / 2).coerceAtMost(1f)
             Brush.horizontalGradient(
                 colorStops = arrayOf(
                     0.0f to activeColor,
-                    (lineProgress - fadeRange / 2).coerceAtLeast(0f) to activeColor,
-                    (lineProgress + fadeRange / 2).coerceAtMost(1f) to inactiveColor,
+                    fadeStart to activeColor,
+                    ((fadeStart + fadeEnd) / 2f) to lerpColor(activeColor, inactiveColor, 0.5f),
+                    fadeEnd to inactiveColor,
                     1.0f to inactiveColor
                 ),
-                endX =totalWidth
+                endX = totalWidth
             )
         }
     }
@@ -345,6 +382,7 @@ fun String.isPureCjk(): Boolean {
 }
 
 fun DrawScope.drawLine(
+    isAccompanimentLine: Boolean,
     lineLayouts: List<List<SyllableLayout>>,
     currentTimeMs: Int,
     color: Color,
@@ -409,7 +447,7 @@ fun DrawScope.drawLine(
                         0f
                     }
 
-                    if (perCharDuration > fastCharAnimationThresholdMs && syllable.duration >= 1000 && !syllable.content.isPureCjk()) {
+                    if (perCharDuration > fastCharAnimationThresholdMs && syllable.duration >= 1000 && !syllable.content.isPureCjk() && !isAccompanimentLine) {
                         // "Awesome" 逐字动画
                         val textStyle = syllableLayout.textLayoutResult.layoutInput.style
                         val syllableBottomCenter = Offset(
@@ -431,8 +469,19 @@ fun DrawScope.drawLine(
                                     1f
                                 )
                             val floatOffset =
-                                6f * DipAndRise.transform(1.0f - awesomeProgress)
-                            val scale = 1f + Swell.transform(awesomeProgress)
+                                6f * DipAndRise(
+                                    dip = ((0.5 * (syllable.duration - fastCharAnimationThresholdMs * syllable.content.length) / 1000))
+                                        .coerceIn(0.0, 0.5)
+                                ).transform(1.0f - awesomeProgress)
+                            val scale =
+                                1f + Swell(
+                                    (0.1 * (syllable.duration - fastCharAnimationThresholdMs * syllable.content.length) / 1000).coerceIn(
+                                        0.0,
+                                        0.1
+                                    )
+                                ).transform(
+                                    awesomeProgress
+                                )
                             val yPos = syllableLayout.position.y + floatOffset
                             val xPos =
                                 syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(
@@ -548,18 +597,8 @@ fun KaraokeLineText(
     currentTimeMs: Int,
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
-    normalTextStyle: TextStyle = LocalTextStyle.current.copy(
-        fontSize = 34.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = SFPro,
-        textMotion = TextMotion.Animated,
-    ),
-    accompanimentTextStyle: TextStyle = LocalTextStyle.current.copy(
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = SFPro,
-        textMotion = TextMotion.Animated,
-    )
+    normalLineTextStyle: TextStyle,
+    accompanimentLineTextStyle: TextStyle
 ) {
     val isFocused = line.isFocused(currentTimeMs)
     val textMeasurer = rememberTextMeasurer()
@@ -609,9 +648,9 @@ fun KaraokeLineText(
 
                 val textStyle = remember(line.isAccompaniment) {
                     if (line.isAccompaniment) {
-                        accompanimentTextStyle
+                        accompanimentLineTextStyle
                     } else {
-                        normalTextStyle
+                        normalLineTextStyle
                     }
                 }
 
@@ -643,6 +682,7 @@ fun KaraokeLineText(
                     modifier = Modifier.size(maxWidth, (totalHeight + 8).toDp())
                 ) {
                     drawLine(
+                        isAccompanimentLine = line.isAccompaniment,
                         lineLayouts = staticLineLayouts,
                         currentTimeMs = currentTimeMs,
                         color = activeColor,
@@ -714,5 +754,3 @@ private fun IntSize.toDpSize(): DpSize {
         DpSize(width.toDp(), height.toDp())
     }
 }
-
-
