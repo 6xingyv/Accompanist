@@ -15,26 +15,26 @@ class MusicRepositoryImpl(private val context: Context): MusicRepository {
         return listOf(
             MusicItem(
                 "La Pelirroja",
-                "TTML v1",
+                "TTML v1 [Single Singer]",
                 MediaItem.fromUri("asset:///la-pelirroja.mp3"),
                 "la-pelirroja.ttml"
             ),
             MusicItem(
                 "ME!",
-                "Lyricify Syllable & LRC",
+                "Lyricify Syllable & LRC [Duo Singer, With Accompaniment, With Translation]",
                 MediaItem.fromUri("asset:///me.mp3"),
                 "me.lys",
                 "me-translation.lrc"
             ),
             MusicItem(
                 "Golden Hour",
-                "TTML(AMLL)",
+                "TTML(AMLL) [Single Singer, With Accompaniment]",
                 MediaItem.fromUri("asset:///golden-hour.m4a"),
                 "golden-hour.ttml"
             ),
             MusicItem(
                 "好久没下雨了",
-                "TTML CJK",
+                "TTML [Single Singer, With Breathing Dots, CJK]",
                 MediaItem.fromUri("asset:///havent-rain-for-so-long.mp3"),
                 "havent-rain-for-so-long.ttml"
             )
