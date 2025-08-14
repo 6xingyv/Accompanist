@@ -53,7 +53,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("com.mocharealm.accompanist", "lyrics-ui", "1.0.3")
+    coordinates("com.mocharealm.accompanist", "lyrics-ui", rootProject.version.toString())
 
     pom {
         name = "Accompanist Lyrics UI"

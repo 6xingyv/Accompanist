@@ -18,7 +18,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 3
-        versionName = "1.0.3-flight"
+        versionName = "${rootProject.version}-flight"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -71,14 +71,6 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-//    splits {
-//        abi {
-//            isEnable = true
-//            isUniversalApk = true
-//            //include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-//            reset()
-//        }
-//    }
 }
 
 dependencies {

@@ -6,3 +6,5 @@ plugins {
     alias(libs.plugins.kotlinx.serialization) apply false
     alias(libs.plugins.android.library) apply false
 }
+
+version = "1.0.3"
