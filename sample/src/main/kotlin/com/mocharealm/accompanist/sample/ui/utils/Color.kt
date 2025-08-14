@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils
+package com.mocharealm.accompanist.sample.ui.utils
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb

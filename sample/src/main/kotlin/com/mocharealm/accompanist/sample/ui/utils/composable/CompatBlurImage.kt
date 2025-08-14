@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils.composable
+package com.mocharealm.accompanist.sample.ui.utils.composable
 
 import android.content.Context
 import android.graphics.Bitmap

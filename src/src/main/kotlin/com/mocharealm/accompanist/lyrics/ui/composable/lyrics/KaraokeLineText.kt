@@ -397,7 +397,7 @@ fun DrawScope.drawLine(
     currentTimeMs: Int,
     color: Color,
     textMeasurer: TextMeasurer,
-    showDebugRectangles: Boolean = true
+    showDebugRectangles: Boolean = false
 ) {
     lineLayouts.forEach { rowLayouts ->
         if (rowLayouts.isEmpty()) return@forEach

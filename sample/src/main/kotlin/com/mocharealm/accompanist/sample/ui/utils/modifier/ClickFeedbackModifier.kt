@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils.modifier
+package com.mocharealm.accompanist.sample.ui.utils.modifier
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec

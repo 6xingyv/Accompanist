@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils.composable
+package com.mocharealm.accompanist.sample.ui.utils.composable
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope

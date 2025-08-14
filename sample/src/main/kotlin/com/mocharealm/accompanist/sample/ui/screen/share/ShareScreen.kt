@@ -60,9 +60,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.sample.ui.composable.background.BackgroundVisualState
 import com.mocharealm.accompanist.sample.ui.composable.background.FlowingLightBackground
-import com.mocharealm.accompanist.sample.ui.composable.utils.composable.Capturable
-import com.mocharealm.accompanist.sample.ui.composable.utils.composable.CapturableController
-import com.mocharealm.accompanist.sample.ui.composable.utils.composable.rememberCapturableController
+import com.mocharealm.accompanist.sample.ui.utils.composable.Capturable
+import com.mocharealm.accompanist.sample.ui.utils.composable.CapturableController
+import com.mocharealm.accompanist.sample.ui.utils.composable.rememberCapturableController
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.absoluteValue

@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.mocharealm.accompanist.sample.ui.composable.utils.composable.CompatBlurImage
+import com.mocharealm.accompanist.sample.ui.utils.composable.CompatBlurImage
 
 @Stable
 data class BackgroundVisualState(

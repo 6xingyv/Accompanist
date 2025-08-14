@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mocharealm.accompanist.lyrics.ui.utils.copyHsl
-import com.mocharealm.accompanist.sample.ui.composable.utils.ScreenCornerDataDp
-import com.mocharealm.accompanist.sample.ui.composable.utils.rememberScreenCornerDataDp
+import com.mocharealm.accompanist.sample.ui.utils.ScreenCornerDataDp
+import com.mocharealm.accompanist.sample.ui.utils.rememberScreenCornerDataDp
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt

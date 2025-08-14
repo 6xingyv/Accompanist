@@ -1,5 +1,6 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils
+package com.mocharealm.accompanist.sample.ui.utils
 
+import android.os.Build
 import android.view.RoundedCorner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -34,7 +35,10 @@ data class ScreenCornerDataDp(
 fun rememberScreenCornerShape(): Shape {
     val view = LocalView.current
 
-    // 使用 remember 来缓存计算结果。仅当 view 或其 rootWindowInsets 实例变化时才重新计算。
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return RectangleShape
+    }
+
     val cornerShape by remember(view, view.rootWindowInsets) {
         val insets = view.rootWindowInsets
         val cornerData = if (insets != null) {

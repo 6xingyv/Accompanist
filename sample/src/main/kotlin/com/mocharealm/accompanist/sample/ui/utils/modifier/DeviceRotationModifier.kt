@@ -1,4 +1,4 @@
-package com.mocharealm.accompanist.sample.ui.composable.utils.modifier
+package com.mocharealm.accompanist.sample.ui.utils.modifier
 
 import android.content.Context
 import android.hardware.Sensor
