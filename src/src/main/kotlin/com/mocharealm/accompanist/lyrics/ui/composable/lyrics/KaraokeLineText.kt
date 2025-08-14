@@ -54,6 +54,7 @@ import com.mocharealm.accompanist.lyrics.ui.utils.easing.Bounce
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.DipAndRise
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.EasingOutCubic
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Swell
+import com.mocharealm.accompanist.lyrics.ui.utils.isPunctuation
 import com.mocharealm.accompanist.lyrics.ui.utils.isPureCjk
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -418,7 +419,7 @@ fun DrawScope.drawLine(
             )
             canvas.saveLayer(layerBounds, Paint())
 
-            rowLayouts.forEach { syllableLayout ->
+            rowLayouts.forEachIndexed { index, syllableLayout ->
                 val wordAnimInfo = syllableLayout.wordAnimInfo
 
                 if (wordAnimInfo != null) {
@@ -463,7 +464,24 @@ fun DrawScope.drawLine(
                         }
                     }
                 } else {
-                    val progress = syllableLayout.syllable.progress(currentTimeMs)
+                    // 对于标点符号，寻找前一个非标点音节来计算升起动画
+                    val progressSyllable = if (syllableLayout.syllable.content.trim().isPunctuation()) {
+                        // 向前查找第一个非标点音节
+                        var searchIndex = index - 1
+                        while (searchIndex >= 0) {
+                            val candidateSyllable = rowLayouts[searchIndex]
+                            if (!candidateSyllable.syllable.content.trim().isPunctuation()) {
+                                candidateSyllable
+                                break
+                            }
+                            searchIndex--
+                        }
+                        // 如果没找到非标点音节，使用当前音节
+                        if (searchIndex < 0) syllableLayout else rowLayouts[searchIndex]
+                    } else {
+                        syllableLayout
+                    }
+                    val progress = progressSyllable.syllable.progress(currentTimeMs)
                     val floatOffset = 6f * EasingOutCubic.transform(1f - progress)
                     val finalPosition = syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
                     drawText(

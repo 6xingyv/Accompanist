@@ -35,3 +35,19 @@ fun String.isPureCjk(): Boolean {
     }
     return cleanedStr.all { it.isCjk() }
 }
+
+fun String.isPunctuation(): Boolean {
+    return isNotEmpty() && all { char ->
+        char.isWhitespace() ||
+                char in ".,!?;:\"'()[]{}…—–-、。，！？；：\"\"''（）【】《》～·" ||
+                Character.getType(char) in setOf(
+            Character.CONNECTOR_PUNCTUATION.toInt(),
+            Character.DASH_PUNCTUATION.toInt(),
+            Character.END_PUNCTUATION.toInt(),
+            Character.FINAL_QUOTE_PUNCTUATION.toInt(),
+            Character.INITIAL_QUOTE_PUNCTUATION.toInt(),
+            Character.OTHER_PUNCTUATION.toInt(),
+            Character.START_PUNCTUATION.toInt()
+        )
+    }
+}
