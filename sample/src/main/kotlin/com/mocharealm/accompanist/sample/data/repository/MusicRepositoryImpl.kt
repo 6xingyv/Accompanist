@@ -28,7 +28,7 @@ class MusicRepositoryImpl(private val context: Context): MusicRepository {
             ),
             MusicItem(
                 "Golden Hour",
-                "TTML(AMLL) [Single Singer, With Accompaniment]",
+                "TTML(AMLL) [Single Singer, With Accompaniment, Independent Punctuation]",
                 MediaItem.fromUri("asset:///golden-hour.mp3"),
                 "golden-hour.ttml"
             ),
