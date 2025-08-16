@@ -49,11 +49,11 @@ fun rememberScreenCornerShape(): Shape {
                 bottomRight = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)
             )
         } else {
-            // 如果无法获取 insets，则使用空数据
+            // If insets cannot be obtained, use empty data
             ScreenCornerData(null, null, null, null)
         }
 
-        // 如果所有角都是null（例如在没有圆角的屏幕上），则直接返回矩形以优化性能。
+        // If all corners are null (e.g., on screens without rounded corners), return Rectangle directly for performance optimization
         if (cornerData.topLeft == null && cornerData.topRight == null && cornerData.bottomLeft == null && cornerData.bottomRight == null) {
             lazy { RectangleShape }
         } else {
@@ -75,7 +75,7 @@ class ScreenCornerShape(private val cornerData: ScreenCornerData) : Shape {
             val width = size.width
             val height = size.height
 
-            // 右上角
+            // Top right corner
             cornerData.topRight?.let { corner ->
                 val radius = corner.radius.toFloat()
                 moveTo(width - radius, 0f)
@@ -91,7 +91,7 @@ class ScreenCornerShape(private val cornerData: ScreenCornerData) : Shape {
             }
             lineTo(width, 0f)
 
-            // 右下角
+            // Bottom right corner
             cornerData.bottomRight?.let { corner ->
                 val radius = corner.radius.toFloat()
                 lineTo(width, height - radius)
@@ -107,7 +107,7 @@ class ScreenCornerShape(private val cornerData: ScreenCornerData) : Shape {
             lineTo(width, height)
 
 
-            // 左下角
+            // Bottom left corner
             cornerData.bottomLeft?.let { corner ->
                 val radius = corner.radius.toFloat()
                 lineTo(radius, height)
@@ -123,7 +123,7 @@ class ScreenCornerShape(private val cornerData: ScreenCornerData) : Shape {
             lineTo(0f, height)
 
 
-            // 左上角
+            // Top left corner
             cornerData.topLeft?.let { corner ->
                 val radius = corner.radius.toFloat()
                 lineTo(0f, radius)
@@ -152,19 +152,19 @@ fun rememberScreenCornerDataDp(): ScreenCornerDataDp {
     return remember(view, view.rootWindowInsets, density) {
         val insets = view.rootWindowInsets ?: return@remember ScreenCornerDataDp(0.dp, 0.dp, 0.dp, 0.dp)
 
-        // 分别获取四个角的半径（像素）
+        // Get radius of each corner separately (in pixels)
         val topLeftRadiusPx = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius ?: 0
         val topRightRadiusPx = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)?.radius ?: 0
         val bottomLeftRadiusPx = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)?.radius ?: 0
         val bottomRightRadiusPx = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)?.radius ?: 0
 
-        // 将像素转换为 Dp
+        // Convert pixels to Dp
         val topLeftDp = with(density) { topLeftRadiusPx.toDp() }
         val topRightDp = with(density) { topRightRadiusPx.toDp() }
         val bottomLeftDp = with(density) { bottomLeftRadiusPx.toDp() }
         val bottomRightDp = with(density) { bottomRightRadiusPx.toDp() }
 
-        // 创建 RoundedCornerShape
+        // Create ScreenCornerDataDp
         ScreenCornerDataDp(
             topLeft = topLeftDp,
             topRight = topRightDp,

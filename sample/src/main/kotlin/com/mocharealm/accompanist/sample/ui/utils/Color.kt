@@ -10,23 +10,23 @@ fun Color.copyHsl(
     lightness: Float? = null,
     alpha: Float? = null
 ): Color {
-    // 1. 创建一个Float数组来存储HSL值
+    // 1. Create a Float array to store HSL values
     val hsl = FloatArray(3)
 
-    // 2. 将Compose Color (ARGB) 转换为 HSL
-    // toArgb() 将Compose Color转为Android的Int颜色值
+    // 2. Convert Compose Color (ARGB) to HSL
+    // toArgb() converts Compose Color to Android's Int color value
     ColorUtils.colorToHSL(this.toArgb(), hsl)
 
-    // 3. 使用用户提供的新值，如果用户未提供（为null），则保留原始值
-    // ?: 是 Elvis 操作符，如果左侧为null，则使用右侧的值
+    // 3. Use user-provided new values, if user didn't provide (null), keep original values
+    // ?: is Elvis operator, if left side is null, use right side value
     val newHue = hue ?: hsl[0]
     val newSaturation = saturation ?: hsl[1]
     val newLightness = lightness ?: hsl[2]
     val newAlpha = alpha ?: this.alpha
 
-    // 4. 将最终的HSL值转换回 ARGB Int 颜色值
+    // 4. Convert final HSL values back to ARGB Int color value
     val finalColorInt = ColorUtils.HSLToColor(floatArrayOf(newHue, newSaturation, newLightness))
 
-    // 5. 从Int颜色值创建Compose Color，并应用最终的透明度
+    // 5. Create Compose Color from Int color value and apply final alpha
     return Color(finalColorInt).copy(alpha = newAlpha)
 }

@@ -204,9 +204,7 @@ class PlayerViewModel(
                 updateState { currentState ->
                     currentState.copy(
                         playbackState = currentState.playbackState.copy(
-                            // 依然更新真实 position
                             position = controller.currentPosition,
-                            // lastUpdateTime 现在其实已经没用了，但可以保留
                             lastUpdateTime = System.currentTimeMillis()
                         )
                     )

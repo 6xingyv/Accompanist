@@ -32,7 +32,7 @@ fun Modifier.deviceRotation(
         return@composed this
     }
 
-    // 俯仰角和翻滚角
+    // Pitch and roll angles
     var pitch by remember { mutableFloatStateOf(0f) }
     var roll by remember { mutableFloatStateOf(0f) }
 
@@ -40,17 +40,17 @@ fun Modifier.deviceRotation(
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
-                    // 从旋转矢量获取旋转矩阵
+                    // Get rotation matrix from rotation vector
                     val rotationMatrix = FloatArray(9)
                     SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
 
-                    // 从旋转矩阵获取方向角（方位角、俯仰角、翻滚角）
+                    // Get orientation angles from rotation matrix (azimuth, pitch, roll)
                     val orientationAngles = FloatArray(3)
                     SensorManager.getOrientation(rotationMatrix, orientationAngles)
 
-                    // 将弧度转换为角度并更新状态
-                    // orientationAngles[1] 是俯仰角 (pitch)，对应 X 轴旋转
-                    // orientationAngles[2] 是翻滚角 (roll)，对应 Y 轴旋转
+                    // Convert radians to degrees and update state
+                    // orientationAngles[1] is pitch angle, corresponding to X-axis rotation
+                    // orientationAngles[2] is roll angle, corresponding to Y-axis rotation
                     pitch = Math.toDegrees(orientationAngles[1].toDouble()).toFloat()
                     roll = Math.toDegrees(orientationAngles[2].toDouble()).toFloat()
                 }
@@ -71,11 +71,11 @@ fun Modifier.deviceRotation(
     }
 
     this.graphicsLayer {
-        // 对 pitch 取反可以获得更自然的效果（手机顶部向下倾斜时，UI顶部向远处旋转）
+        // Inverting pitch gives a more natural effect (when phone tilts down, UI top rotates away)
         rotationX = -pitch * rotationFactor
         rotationY = roll * rotationFactor
 
-        // 设置相机距离增强 3D 视差效果
+        // Set camera distance to enhance 3D parallax effect
         this.cameraDistance = cameraDistance * density
     }
 }

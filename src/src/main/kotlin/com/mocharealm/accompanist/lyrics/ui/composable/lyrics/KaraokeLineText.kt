@@ -1,7 +1,7 @@
 package com.mocharealm.accompanist.lyrics.ui.composable.lyrics
 
 import android.annotation.SuppressLint
-import android.os.Build
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
@@ -30,14 +30,12 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -52,7 +50,6 @@ import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Bounce
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.DipAndRise
-import com.mocharealm.accompanist.lyrics.ui.utils.easing.EasingOutCubic
 import com.mocharealm.accompanist.lyrics.ui.utils.easing.Swell
 import com.mocharealm.accompanist.lyrics.ui.utils.isPunctuation
 import com.mocharealm.accompanist.lyrics.ui.utils.isPureCjk
@@ -60,7 +57,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * 单词级别的 "awesome" 动画所需的所有预计算参数。
+ * All pre-calculated parameters required for word-level "awesome" animation.
  */
 data class WordAnimationInfo(
     val wordStartTime: Long,
@@ -95,7 +92,7 @@ private fun groupIntoWords(syllables: List<KaraokeSyllable>): List<List<KaraokeS
 }
 
 /**
- * 测量音节并决定动画类型，直接产出包含测量信息的 "半成品" SyllableLayout 列表。
+ * Measure syllables and determine animation type, directly producing "semi-finished" SyllableLayout list with measurement information.
  */
 private fun measureSyllablesAndDetermineAnimation(
     syllables: List<KaraokeSyllable>,
@@ -212,8 +209,8 @@ private fun calculateBalancedLines(
 }
 
 /**
- * 接收包含测量信息的 "半成品" SyllableLayout，计算最终位置和动画参数，
- * 输出 "完整版" 的 SyllableLayout 列表。
+ * Receive "semi-finished" SyllableLayout with measurement information, calculate final position and animation parameters,
+ * output "complete" SyllableLayout list.
  */
 private fun calculateStaticLineLayout(
     wrappedLines: List<WrappedLine>,
@@ -223,7 +220,7 @@ private fun calculateStaticLineLayout(
 ): List<List<SyllableLayout>> {
     val layoutsByWord = mutableMapOf<Int, MutableList<SyllableLayout>>()
 
-    // Pass 1: 计算初始位置，并用 .copy() 更新 SyllableLayout 对象。同时按 wordId 分组。
+    // Pass 1: Calculate initial position, update SyllableLayout objects with .copy(). Also group by wordId.
     val positionedLines = wrappedLines.mapIndexed { lineIndex, wrappedLine ->
         val lineY = lineIndex * lineHeight
         val startX = when (lineAlignment) {
@@ -241,7 +238,7 @@ private fun calculateStaticLineLayout(
         }
     }
 
-    // Pass 2: 预计算所有单词级别的动画信息。
+    // Pass 2: Pre-calculate all word-level animation information.
     val animInfoByWord = mutableMapOf<Int, WordAnimationInfo>()
     val charOffsetsBySyllable = mutableMapOf<SyllableLayout, Int>()
 
@@ -260,7 +257,7 @@ private fun calculateStaticLineLayout(
         }
     }
 
-    // Pass 3: 最后一次 .copy()，将单词级别的动画信息和焦点注入每个 SyllableLayout。
+    // Pass 3: Final .copy(), inject word-level animation information and focus into each SyllableLayout.
     return positionedLines.map { line ->
         line.map { positionedLayout ->
             val wordLayouts = layoutsByWord.getValue(positionedLayout.wordId)
@@ -437,7 +434,7 @@ fun DrawScope.drawLine(
                         val awesomeStartTime = (earliestStartTime + (latestStartTime - earliestStartTime) * charRatio).toLong()
                         val awesomeProgress = ((currentTimeMs - awesomeStartTime).toFloat() / awesomeDuration).coerceIn(0f, 1f)
 
-                        val floatOffset = 6f * DipAndRise(dip = ((0.5 * (wordAnimInfo.wordDuration - fastCharAnimationThresholdMs * numCharsInWord) / 1000)).coerceIn(0.0, 0.5)).transform(1.0f - awesomeProgress)
+                        val floatOffset = 4f * DipAndRise(dip = ((0.5 * (wordAnimInfo.wordDuration - fastCharAnimationThresholdMs * numCharsInWord) / 1000)).coerceIn(0.0, 0.5)).transform(1.0f - awesomeProgress)
                         val scale = 1f + Swell((0.1 * (wordAnimInfo.wordDuration - fastCharAnimationThresholdMs * numCharsInWord) / 1000).coerceIn(0.0, 0.1)).transform(awesomeProgress)
                         val yPos = syllableLayout.position.y + floatOffset
                         val xPos = syllableLayout.position.x + syllableLayout.textLayoutResult.getHorizontalPosition(offset = charIndex, usePrimaryDirection = true)
@@ -464,9 +461,9 @@ fun DrawScope.drawLine(
                         }
                     }
                 } else {
-                    // 对于标点符号，寻找前一个非标点音节来计算升起动画
+                    // For punctuation, find the previous non-punctuation syllable to calculate rise animation
                     val progressSyllable = if (syllableLayout.syllable.content.trim().isPunctuation()) {
-                        // 向前查找第一个非标点音节
+                        // Search forward for the first non-punctuation syllable
                         var searchIndex = index - 1
                         while (searchIndex >= 0) {
                             val candidateSyllable = rowLayouts[searchIndex]
@@ -476,13 +473,13 @@ fun DrawScope.drawLine(
                             }
                             searchIndex--
                         }
-                        // 如果没找到非标点音节，使用当前音节
+                        // If no non-punctuation syllable is found, use current syllable
                         if (searchIndex < 0) syllableLayout else rowLayouts[searchIndex]
                     } else {
                         syllableLayout
                     }
                     val progress = progressSyllable.syllable.progress(currentTimeMs)
-                    val floatOffset = 6f * EasingOutCubic.transform(1f - progress)
+                    val floatOffset = 4f * LinearOutSlowInEasing.transform(1f - progress)
                     val finalPosition = syllableLayout.position.copy(y = syllableLayout.position.y + floatOffset)
                     drawText(
                         textLayoutResult = syllableLayout.textLayoutResult,
@@ -560,10 +557,10 @@ fun KaraokeLineText(
                     if (line.isAccompaniment) accompanimentLineTextStyle else normalLineTextStyle
                 }
 
-                // 1. 测量并产出 "半成品" Layout 对象
+                // 1. Measure and produce "semi-finished" Layout objects
                 val processedSyllables = remember(line.syllables, line.alignment) {
                     if (line.alignment == KaraokeAlignment.End) {
-                        // 去除末尾空白音节
+                        // Remove trailing blank syllables
                         line.syllables.dropLastWhile { it.content.isBlank() }
                     } else {
                         line.syllables
@@ -578,7 +575,7 @@ fun KaraokeLineText(
                     )
                 }
 
-                // 2. 将 Layout 对象进行换行
+                // 2. Wrap Layout objects into lines
                 val wrappedLines = remember(initialLayouts, availableWidthPx, textMeasurer, textStyle) {
                     calculateBalancedLines(
                         syllableLayouts = initialLayouts,
@@ -592,7 +589,7 @@ fun KaraokeLineText(
                     textMeasurer.measure("M", textStyle).size.height.toFloat()
                 }
 
-                // 3. 计算最终位置和动画参数，得到 "完整版" Layout 对象
+                // 3. Calculate final position and animation parameters, get "complete" Layout objects
                 val finalLineLayouts = remember(wrappedLines, availableWidthPx, lineHeight) {
                     calculateStaticLineLayout(
                         wrappedLines = wrappedLines,

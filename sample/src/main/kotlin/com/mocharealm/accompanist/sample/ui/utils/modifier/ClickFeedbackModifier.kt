@@ -124,15 +124,15 @@ class ClickFeedbackNode(
                             val centerX = bounds.width / 2f
                             val centerY = bounds.height / 2f
 
-                            // 计算相对于中心的偏移量
+                            // Calculate offset relative to center
                             val offsetX = (pos.x - centerX) / centerX
                             val offsetY = (pos.y - centerY) / centerY
 
-                            // 限制偏移量范围并应用最大偏移
+                            // Limit offset range and apply maximum offset
                             val clampedOffsetX = offsetX.coerceIn(-1f, 1f) * maxHoverOffset
                             val clampedOffsetY = offsetY.coerceIn(-1f, 1f) * maxHoverOffset
 
-                            // 直接设置值而不是动画，实现即时跟随
+                            // Set values directly without animation for immediate following effect
                             coroutineScope.launch {
                                 animatedOffsetX.snapTo(clampedOffsetX)
                                 animatedOffsetY.snapTo(clampedOffsetY)

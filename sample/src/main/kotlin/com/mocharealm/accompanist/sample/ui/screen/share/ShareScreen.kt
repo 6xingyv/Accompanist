@@ -259,7 +259,7 @@ private fun ColumnScope.ShareGenerateStep(
         }
     }
 
-    // 监听分享事件
+    // Listen for share events
     LaunchedEffect(Unit) {
         shareViewModel.shareEvent.collect { uri ->
             val sendIntent: Intent = Intent().apply {
@@ -569,25 +569,25 @@ fun ShareCardSpotify(
 }
 
 fun Modifier.pagerCubeInDepthTransition(page: Int, pagerState: PagerState) = graphicsLayer {
-    // 设置摄像机距离，防止3D旋转时出现过度裁剪或失真
+    // Set camera distance to prevent excessive clipping or distortion during 3D rotation
     cameraDistance = 32f
 
-    // 获取当前页面相对于视口中心的偏移量。
-    // 0f 表示页面在正中心。
-    // 1f 表示页面在右侧一个完整页面的位置。
-    // -1f 表示页面在左侧一个完整页面的位置。
+    // Get the current page's offset relative to the viewport center.
+    // 0f means the page is at the center.
+    // 1f means the page is one full page to the right.
+    // -1f means the page is one full page to the left.
     val pageOffset = pagerState.getOffsetDistanceInPages(page)
 
-    // 设置旋转中心为卡片自身的中心 (X=50%, Y=50%)
+    // Set rotation center to the card's own center (X=50%, Y=50%)
     transformOrigin = TransformOrigin(0.5f, 0.5f)
 
-    // 根据页面偏移量直接计算旋转角度。
-    // 当页面向右滑动 (pageOffset 变为正数), 卡片向内（顺时针）旋转。
-    // 当页面向左滑动 (pageOffset 变为负数), 卡片向外（逆时针）旋转。
+    // Calculate rotation angle directly based on page offset.
+    // When page slides right (pageOffset becomes positive), card rotates inward (clockwise).
+    // When page slides left (pageOffset becomes negative), card rotates outward (counterclockwise).
     rotationY = -90f * pageOffset
 
 
-    // 当卡片偏离中心时，稍微缩小，增加深度感
+    // When card deviates from center, slightly shrink it to increase depth perception
     val scale = 1f - 0.2f * pageOffset.absoluteValue
     scaleX = scale
     scaleY = scale

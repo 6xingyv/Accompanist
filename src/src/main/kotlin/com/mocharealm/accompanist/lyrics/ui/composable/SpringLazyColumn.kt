@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.pow
 
-// 类型别名和内部状态类
+// Type aliases and internal state classes
 private typealias PhysicsParams = Triple<Float, Float, Float> // stiffness, damping, drag
 
 class SpringItemState {
@@ -209,7 +209,7 @@ fun <T> SpringLazyColumn(
                         forces[i] = totalForce
                     }
 
-                    // --- 阶段二: 应用所有力来更新状态 ---
+                    // --- Phase 2: Apply all forces to update state ---
                     for (i in state.itemStates.indices) {
                         val itemState = state.itemStates[i]
                         val acceleration = forces[i]

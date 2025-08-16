@@ -210,7 +210,7 @@ fun PlayerScreen(
 fun MusicItemSelectionDialog(
     items: List<MusicItem>,
     onItemSelected: (MusicItem) -> Unit,
-    onDismissRequest: () -> Unit // 当用户点击对话框外部或返回键时调用
+    onDismissRequest: () -> Unit
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
     AlertDialog(
@@ -230,7 +230,6 @@ fun MusicItemSelectionDialog(
                 }
             }
         },
-        // 我们不需要确认按钮，因为点击列表项就是选择了
         confirmButton = {
             Text("Confirm", Modifier.clickable {
                 if (selectedIndex != -1) {

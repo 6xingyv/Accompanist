@@ -50,32 +50,32 @@ fun KaraokeBreathingDots(
         val margin = with(LocalDensity.current) { defaults.margin.toPx() }
         val totalWidth = size * defaults.number + margin * (defaults.number - 1)
 
-        // --- 动画阶段定义 ---
+        // --- Animation phase definitions ---
         val enterDuration = defaults.enterDurationMs.toFloat()
         val exitDuration = defaults.exitDurationMs.toFloat()
         val preExitStillDuration = defaults.preExitStillDuration.toFloat()
         val preExitDipAndRiseDuration = defaults.preExitDipAndRiseDuration.toFloat()
 
-        // --- 动画阶段时间点计算 (从后往前) ---
+        // --- Animation phase timing calculation (calculated backwards from end) ---
         val exitStartTime = endTimeMs - exitDuration
         val preExitStillStartTime = exitStartTime - preExitStillDuration
         val preExitDipAndRiseStartTime = preExitStillStartTime - preExitDipAndRiseDuration
         val breathingStartTime = startTimeMs + enterDuration
         val breathingDuration = preExitDipAndRiseStartTime - breathingStartTime
 
-        // --- 动画状态变量计算 ---
+        // --- Animation state variable calculation ---
         var scale: Float
         var alpha: Float
         var revealProgress: Float
 
         val currentTime = currentTimeMs.toFloat()
 
-        // 定义呼吸动画的核心参数
-        val breathingAmplitude = 0.1f // 振幅 (0.8 到 1.0)
-        val breathingCenter = 0.9f  // 中心
-        val breathingTrough = breathingCenter - breathingAmplitude // 波谷值 (0.8)
+        // Define core parameters for breathing animation
+        val breathingAmplitude = 0.1f // Amplitude (0.8 to 1.0)
+        val breathingCenter = 0.9f  // Center
+        val breathingTrough = breathingCenter - breathingAmplitude // Trough value (0.8)
 
-        // 检查总时长是否过短，如果过短则使用简化的回退动画
+        // Check if total duration is too short, use simplified fallback animation if so
         if (breathingDuration < 0) {
             val overallProgress = when {
                 currentTime < startTimeMs + enterDuration -> (currentTime - startTimeMs) / enterDuration
@@ -87,29 +87,29 @@ fun KaraokeBreathingDots(
             alpha = overallProgress
             revealProgress = if (currentTime < startTimeMs + enterDuration) overallProgress else 1f
         } else {
-            // 完整的多阶段动画逻辑
+            // Complete multi-stage animation logic
             when {
-                // 1. 进入阶段
+                // 1. Enter phase
                 currentTime < breathingStartTime -> {
                     val linearProgress = (currentTime - startTimeMs) / enterDuration
-                    // --- FIX: 应用缓动曲线使动画结束时速度为0 ---
+                    // --- FIX: Apply easing curve to make animation end with zero velocity ---
                     val easedProgress = FastOutSlowInEasing.transform(linearProgress)
 
                     alpha = easedProgress
-                    // --- FIX: 动画的目标值是呼吸动画的起点（波谷） ---
+                    // --- FIX: Animation target is the starting point of breathing animation (trough) ---
                     scale = easedProgress * breathingTrough
                     revealProgress = easedProgress
                 }
-                // 2. 呼吸阶段
+                // 2. Breathing phase
                 currentTime < preExitDipAndRiseStartTime -> {
                     alpha = 1f
                     revealProgress = 1f
                     val timeInPhase = currentTime - breathingStartTime
-                    // --- FIX: 调整起始相位，使动画从静止点（波谷）平滑启动 ---
-                    val angle = (timeInPhase / 3000f) * 2 * PI - (PI / 2f) // 3000ms一个呼吸周期
+                    // --- FIX: Adjust starting phase to smoothly start animation from rest point (trough) ---
+                    val angle = (timeInPhase / 3000f) * 2 * PI - (PI / 2f) // 3000ms per breathing cycle
                     scale = breathingCenter + breathingAmplitude * sin(angle.toFloat())
                 }
-                // 3. 预退出 - "深呼吸" (收缩并放大)
+                // 3. Pre-exit - "Deep breath" (contract and expand)
                 currentTime < preExitStillStartTime -> {
                     alpha = 1f
                     revealProgress = 1f
@@ -127,13 +127,13 @@ fun KaraokeBreathingDots(
                         scale = 0.6f + sinValue * 0.4f
                     }
                 }
-                // 4. 预退出 - 静止
+                // 4. Pre-exit - Still
                 currentTime < exitStartTime -> {
                     alpha = 1f
                     revealProgress = 1f
                     scale = 1.0f
                 }
-                // 5. 退出阶段
+                // 5. Exit phase
                 else -> {
                     val progress = (endTimeMs - currentTime) / exitDuration
                     alpha = progress.coerceIn(0f, 1f)

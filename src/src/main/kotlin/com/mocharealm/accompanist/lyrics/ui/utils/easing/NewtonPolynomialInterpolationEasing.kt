@@ -39,7 +39,7 @@ class NewtonPolynomialInterpolationEasing(points: List<Pair<Double, Double>>): E
         val n = xValues.size - 1
         var result = dividedDifferences[n]
 
-        // 使用霍纳法则进行高效计算
+        // Use Horner's method for efficient calculation
         for (i in (n - 1) downTo 0) {
             result = result * (x - xValues[i]) + dividedDifferences[i]
         }

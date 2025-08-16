@@ -90,10 +90,8 @@ fun KaraokeLyricsView(
     val rawFirstFocusedLineIndex = lyrics.getCurrentFirstHighlightLineIndexByTime(currentTimeMs)
 
     val finalFirstFocusedLineIndex = run {
-        // 检查找到的行是否是伴奏
         val line = lyrics.lines.getOrNull(rawFirstFocusedLineIndex) as? KaraokeLine
         if (line != null && line.isAccompaniment) {
-            // 如果是伴奏，执行你的回溯策略
             var newIndex = rawFirstFocusedLineIndex
             for (i in rawFirstFocusedLineIndex downTo 0) {
                 if (!(lyrics.lines[i] as KaraokeLine).isAccompaniment) {
@@ -103,7 +101,6 @@ fun KaraokeLyricsView(
             }
             newIndex
         } else {
-            // 如果不是伴奏，直接使用库返回的结果
             rawFirstFocusedLineIndex
         }
     }

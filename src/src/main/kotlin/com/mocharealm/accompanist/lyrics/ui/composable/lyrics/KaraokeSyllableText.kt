@@ -6,19 +6,19 @@ import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
 
 
 /**
- * 统一的数据结构，贯穿测量和布局全过程。
- * 初始创建时只填充测量相关字段，布局计算后，再用最终位置信息填充其他字段。
+ * Unified data structure that spans the entire measurement and layout process.
+ * Initially created with only measurement-related fields populated. After layout calculation,
+ * other fields are filled with final position information.
  */
-
 data class SyllableLayout(
-    // --- 测量阶段填充的字段 ---
+    // --- Fields populated during measurement phase ---
     val syllable: KaraokeSyllable,
     val textLayoutResult: TextLayoutResult,
     val wordId: Int,
     val useAwesomeAnimation: Boolean,
     val width: Float = textLayoutResult.size.width.toFloat(),
 
-    // --- 布局阶段填充的字段 ---
+    // --- Fields populated during layout phase ---
     val position: Offset = Offset.Zero,
     val wordPivot: Offset = Offset.Zero,
     val wordAnimInfo: WordAnimationInfo? = null,

@@ -117,23 +117,23 @@ class ShareViewModel : ViewModel() {
     fun prepareForSharing(context: Context, bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 1. 将 Bitmap 保存到应用的缓存目录
-                val cachePath = File(context.cacheDir, "images/")
-                cachePath.mkdirs() // 创建目录
-                val file = File(cachePath, "share_image.png")
-                FileOutputStream(file).use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                }
+                // 1. Save Bitmap to app's cache directory
+                val cachePath = File(context.cacheDir, "shared_images")
+                cachePath.mkdirs() // Create directory
+                val imageFile = File(cachePath, "share_${System.currentTimeMillis()}.png")
+                val fos = FileOutputStream(imageFile)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                fos.close()
 
-                // 2. 使用 FileProvider 获取一个安全的 content:// URI
-                val contentUri = FileProvider.getUriForFile(
+                // 2. Use FileProvider to get a secure content:// URI
+                val uri = FileProvider.getUriForFile(
                     context,
-                    "${context.packageName}.fileprovider", // 你的 FileProvider authority
-                    file
+                    "${context.packageName}.fileprovider", // Your FileProvider authority
+                    imageFile
                 )
 
-                // 3. 发射分享事件，UI层将监听到这个URI并启动分享
-                _shareEvent.emit(contentUri)
+                // 3. Emit share event, UI layer will listen to this URI and start sharing
+                _shareEvent.emit(uri)
 
             } catch (e: Exception) {
                 _toastEvent.emit("Share failed: ${e.message}")

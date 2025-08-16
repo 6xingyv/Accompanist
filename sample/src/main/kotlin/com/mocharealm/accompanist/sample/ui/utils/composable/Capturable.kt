@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import kotlinx.coroutines.launch
 
 class CapturableController {
-    // 内部持有一个触发器，这个触发器现在需要知道截图成功后该做什么
     internal var triggerCapture: ((onCaptured: (ImageBitmap) -> Unit) -> Unit)? = null
 
     /**
@@ -40,7 +39,6 @@ fun Capturable(
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
 
-    // 实现 controller 的内部触发器
     controller.triggerCapture = { onCapturedCallback ->
         coroutineScope.launch {
             val imageBitmap = graphicsLayer.toImageBitmap()
