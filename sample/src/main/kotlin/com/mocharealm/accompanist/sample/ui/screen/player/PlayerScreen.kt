@@ -135,14 +135,14 @@ fun PlayerScreen(
                             Text(
                                 uiState.currentMusicItem?.label ?: "Unknown Title",
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = SFPro,
+                                fontFamily = SFPro(),
                                 lineHeight = 1.em,
                                 color = Color.White
                             )
                             Text(
                                 uiState.currentMusicItem?.testTarget?.split(" [")[0] ?: "Unknown",
                                 Modifier.alpha(0.6f),
-                                fontFamily = SFPro,
+                                fontFamily = SFPro(),
                                 lineHeight = 1.em,
                                 color = Color.White
                             )

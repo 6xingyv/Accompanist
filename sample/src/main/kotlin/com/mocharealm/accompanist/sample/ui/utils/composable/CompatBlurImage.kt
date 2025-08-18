@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.mocharealm.accompanist.sample.ui.utils.composable
 
 import android.content.Context

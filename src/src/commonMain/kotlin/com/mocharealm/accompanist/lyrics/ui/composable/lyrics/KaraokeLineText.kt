@@ -1,6 +1,5 @@
 package com.mocharealm.accompanist.lyrics.ui.composable.lyrics
 
-import android.annotation.SuppressLint
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -508,7 +507,6 @@ fun DrawScope.drawLine(
     }
 }
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
 @Stable
 @Composable
 fun KaraokeLineText(

@@ -1,10 +1,45 @@
-import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
 
 plugins {
+    alias(libs.plugins.jetbrains.kotlin.multiplatform)
+    alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.android.library)
-    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.maven.publish)
+}
+
+kotlin {
+    androidTarget()
+    jvm()
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
+                implementation(libs.accompanist.lyrics.core)
+                implementation(compose.components.resources)
+            }
+        }
+    }
+}
+
+compose {
+    resources {
+        packageOfResClass = "com.mocharealm.accompanist.lyrics.ui"
+        publicResClass = true
+        generateResClass = always
+        customDirectory(
+            sourceSetName = "commonMain",
+            directoryProvider = provider {
+                layout.projectDirectory.dir("src/commonMain/resources")
+            }
+        )
+    }
 }
 
 android {
@@ -33,23 +68,15 @@ android {
     }
 }
 
-dependencies {
-    implementation(libs.androidx.foundation)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.accompanist.lyrics.core)
-}
-
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
 
-    configure(AndroidSingleVariantLibrary(
-        variant = "release",
-        sourcesJar = true,
-        publishJavadocJar = true
-    ))
+    configure(
+        KotlinMultiplatform(
+            javadocJar = JavadocJar.Empty(),
+            sourcesJar = true
+        )
+    )
 
     signAllPublications()
 
@@ -57,7 +84,7 @@ mavenPublishing {
 
     pom {
         name = "Accompanist Lyrics UI"
-        description = "A lyrics displaying library for Jetpack Compose"
+        description = "A lyrics displaying library for Compose Multiplatform"
         inceptionYear = "2025"
         url = "https://mocharealm.com/open-source"
         licenses {

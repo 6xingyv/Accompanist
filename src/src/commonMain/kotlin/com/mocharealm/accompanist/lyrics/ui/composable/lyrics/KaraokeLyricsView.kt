@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -13,6 +14,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,12 +50,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
@@ -75,13 +79,13 @@ fun KaraokeLyricsView(
     normalLineTextStyle: TextStyle = LocalTextStyle.current.copy(
         fontSize = 34.sp,
         fontWeight = FontWeight.Bold,
-        fontFamily = SFPro,
+        fontFamily = SFPro(),
         textMotion = TextMotion.Animated,
     ),
     accompanimentLineTextStyle: TextStyle = LocalTextStyle.current.copy(
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
-        fontFamily = SFPro,
+        fontFamily = SFPro(),
         textMotion = TextMotion.Animated,
     ),
 ) {
@@ -129,10 +133,12 @@ fun KaraokeLyricsView(
             hasStart && hasEnd
         }
     }
+    val windowHeightPx= LocalWindowInfo.current.containerSize.height
+    val windowHeight = with(LocalDensity.current) {
+        windowHeightPx.toDp()
+    }
 
-    val baseScrollOffset = with(LocalDensity.current) {
-        LocalConfiguration.current.screenHeightDp.dp.toPx()
-    } * 0.1f
+    val baseScrollOffset = windowHeightPx * 0.1f
 
     var isScrollProgrammatically by remember { mutableStateOf(false) }
 
@@ -204,27 +210,24 @@ fun KaraokeLyricsView(
                 items = lyrics.lines,
                 key = { index, line -> "${line.start}-${line.end}-$index" }
             ) { index, line ->
+                val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
+                val positionToFocusedLine = remember(index, allFocusedLineIndex) {
+                    val isCurrentFocusLine = index in allFocusedLineIndex
 
+                    val position = if (isCurrentFocusLine) {
+                        0
+                    } else if (allFocusedLineIndex.isNotEmpty() && index > allFocusedLineIndex.last()) {
+                        index - allFocusedLineIndex.last()
+                    } else if (allFocusedLineIndex.isNotEmpty() && index < allFocusedLineIndex.first()) {
+                        allFocusedLineIndex.first() - index
+                    } else {
+                        2
+                    }
+                    position.toFloat()
+                }
                 when (line) {
-
                     is KaraokeLine -> {
                         if (!line.isAccompaniment) {
-                            val isCurrentFocusLine by rememberUpdatedState(index in allFocusedLineIndex)
-                            val positionToFocusedLine = remember(index, allFocusedLineIndex) {
-                                val isCurrentFocusLine = index in allFocusedLineIndex
-
-                                val position = if (isCurrentFocusLine) {
-                                    0
-                                } else if (allFocusedLineIndex.isNotEmpty() && index > allFocusedLineIndex.last()) {
-                                    index - allFocusedLineIndex.last()
-                                } else if (allFocusedLineIndex.isNotEmpty() && index < allFocusedLineIndex.first()) {
-                                    allFocusedLineIndex.first() - index
-                                } else {
-                                    2
-                                }
-                                position.toFloat()
-                            }
-
                             val blurRadius by animateDpAsState(
                                 targetValue = if (listState.isScrollInProgress && !isScrollProgrammatically) {
                                     0.dp
@@ -302,23 +305,47 @@ fun KaraokeLyricsView(
                     }
 
                     is SyncedLine -> {
+                        val animatedScale by animateFloatAsState(targetValue = if (isCurrentFocusLine) 1.05f else 1f, label = "scale")
+                        val alphaAnimation by animateFloatAsState(
+                            targetValue = if (isCurrentFocusLine) 1f else 0.4f,
+                            label = "alpha"
+                        )
+                        val blurRadius by animateDpAsState(
+                            targetValue = if (listState.isScrollInProgress && !isScrollProgrammatically) {
+                                0.dp
+                            } else {
+                                positionToFocusedLine.coerceAtMost(10f).dp
+                            },
+                            label = "blurAnimation"
+                        )
                         Box(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
+                                .blur(
+                                    blurRadius,
+                                    BlurredEdgeTreatment.Unbounded
+                                )
+                                .combinedClickable(onClick = { onLineClicked(line) }, onLongClick = { onLinePressed(line) })
+                                .graphicsLayer {
+                                    scaleX = animatedScale
+                                    scaleY = animatedScale
+                                    alpha = alphaAnimation
+                                    transformOrigin = TransformOrigin(0f, 1f)
+                                },
                         ) {
                             Column(
                                 Modifier
-                                    .align(Alignment.TopEnd)
+                                    .align(Alignment.TopStart)
                                     .padding(vertical = 8.dp, horizontal = 16.dp)
                             ) {
-                                Text(text = line.content, style = normalLineTextStyle)
+                                //Text("Start: ${line.start} ms\nEnd:${line.end} ms", color = Color.White.copy(0.6f))
+                                Text(text = line.content, style = normalLineTextStyle.copy(lineHeight = 1.2f.em), color = Color.White)
                                 line.translation?.let {
                                     Text(it, color = Color.White.copy(0.6f))
                                 }
                             }
                         }
-
                     }
                 }
 
@@ -342,7 +369,7 @@ fun KaraokeLyricsView(
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(LocalConfiguration.current.screenHeightDp.dp)
+                        .height(windowHeight)
                 )
             }
         }
