@@ -1,19 +1,39 @@
+import com.android.build.api.dsl.androidLibrary
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 
 plugins {
     alias(libs.plugins.jetbrains.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.maven.publish)
 }
 
 kotlin {
-    androidTarget()
+    androidLibrary {
+        namespace = "com.mocharealm.accompanist.lyrics.ui"
+        compileSdk = 36
+
+        minSdk = 29
+
+        withJava()
+        withHostTestBuilder {}.configure {}
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }
+
+        compilations.configureEach {
+            compilerOptions.configure {
+                jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+            }
+        }
+        androidResources.enable = true
+    }
     jvm()
+
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
@@ -39,32 +59,6 @@ compose {
                 layout.projectDirectory.dir("src/commonMain/resources")
             }
         )
-    }
-}
-
-android {
-    namespace = "com.mocharealm.accompanist.lyrics.ui"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 29
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 

@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.multiplatform) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.kotlinx.serialization) apply false
-    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 }
 
-version = "1.0.5"
+version = "1.0.6"

@@ -11,7 +11,8 @@ import androidx.compose.ui.util.lerp
 fun Brush.Companion.easedHorizontalGradient(
     vararg colorStops: Pair<Float, Color>,
     easing: Easing = EaseInQuart,
-    steps: Int = 100
+    endX: Float = 1f,
+    steps: Int = 100,
 ): Brush {
     // Edge cases
     if (colorStops.isEmpty()) {
@@ -26,7 +27,7 @@ fun Brush.Companion.easedHorizontalGradient(
 
     for (i in 0 until sortedStops.size - 1) {
         val startStop = sortedStops[i]
-        val endStop = sortedStops[i+1]
+        val endStop = sortedStops[i + 1]
 
         val startFraction = startStop.first
         val endFraction = endStop.first
@@ -48,5 +49,5 @@ fun Brush.Companion.easedHorizontalGradient(
     finalFineGrainedStops.add(sortedStops.last())
 
 
-    return Brush.horizontalGradient(colorStops = finalFineGrainedStops.toTypedArray())
+    return Brush.horizontalGradient(colorStops = finalFineGrainedStops.toTypedArray(), endX = endX)
 }
